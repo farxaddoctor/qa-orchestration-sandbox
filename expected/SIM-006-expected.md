@@ -11,7 +11,7 @@
 | Skills | Primary: `skills/bug-analysis/SKILL.md`; `skills/qa-test-design/SKILL.md` only for regression recommendations |
 | Audit decision | No edit is permitted; audit-before-edit applies only to a later implementation handoff |
 | Human Gate decision | Not required; Level 0 while expected behavior remains evidence-backed and unknown consistency behavior remains open |
-| Final status | `COMPLETED` |
+| Final status | `PASS` |
 | Expected artifact | Structured defect report with evidence, impact, unknown root cause, open questions, and minimal regression recommendations |
 
 Stop if undocumented consistency behavior must be assumed or any file modification is attempted.
