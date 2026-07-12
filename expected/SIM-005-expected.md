@@ -11,7 +11,7 @@
 | Skills | `skills/bug-analysis/SKILL.md`; no framework skill because the evidence is framework-neutral |
 | Audit decision | No edit is permitted; audit-before-edit applies only to a later proposed change |
 | Human Gate decision | Not required; Level 0 for evidence analysis and diagnostic recommendations |
-| Final status | `COMPLETED` |
+| Final status | `PASS` |
 | Expected artifact | Evidence-separated investigation, likely timing classification with calibrated confidence, alternative causes, unknowns, and diagnostic next steps |
 
 Stop before edits, execution, or treating the timing classification as confirmed root cause.
