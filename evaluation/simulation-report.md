@@ -188,9 +188,9 @@ Sandbox oracle defects count: `6` defect instances across five expected-result f
 
 ## 13. Environment/tooling incidents
 
-One final-audit tooling incident occurred: the managed Windows sandbox helper executable was unavailable for the initial read-only repository inventory. The read-only commands were then run through the approved elevated fallback. This did not change repository content, rerun a simulation, or affect scoring.
+One tooling/environment incident occurred during SIM-001: the native Windows sandbox helper failed to launch because `codex-windows-sandbox-setup.exe` was unavailable, so the first attempt was recorded as `BLOCKED`. The simulation was retried using the Windows `unelevated` sandbox fallback and succeeded. This was not an orchestration architecture defect or critical failure, the vendor hub remained unchanged, and the incident is non-blocking for the architecture validation result.
 
-No environment-blocked simulation result exists in the current `results/` history. The only non-canonical attempt file is the SIM-001 oracle-failure attempt.
+The environment-blocked first attempt is non-canonical. The only non-canonical attempt file in the current `results/` history is the SIM-001 oracle-failure attempt.
 
 Harmless execution-history observations:
 
