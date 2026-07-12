@@ -1,0 +1,3 @@
+[submodule "vendor/qa-skills-hub"]
+	path = vendor/qa-skills-hub
+	url = https://github.com/farxaddoctor/qa-skills-hub
