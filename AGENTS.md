@@ -10,11 +10,17 @@ These instructions apply to the entire consumer sandbox.
 
 The hub under `vendor/qa-skills-hub` is read-only.
 
+Treat the hub as an immutable, pinned dependency. Do not change its checkout or
+content from consumer tasks, and keep all consumer-specific context in this
+repository. If the submodule is missing or uninitialized, stop and instruct the
+operator to run the future command `python scripts/qa_hub.py bootstrap`.
+
 ## Required orchestration path
 
 Every QA simulation must follow:
 
-Command
+Consumer root entry
+-> Hub command
 -> QA Orchestrator
 -> Constitution
 -> Policies
@@ -27,6 +33,27 @@ Command
 -> Output
 
 Direct command-to-skill routing is forbidden.
+
+## Always-on Human Gate
+
+- Level 0 covers read-only analysis, routing, and documentation-only planning;
+  before any consumer file edit, stop and obtain explicit approval for the
+  scoped Level 1 action, and do not infer an unclear edit scope.
+- Stop and request Level 2 approval before changing shared utilities, fixtures,
+  Page Objects, API clients, or framework behavior.
+- Stop and request Level 3 approval before broad refactors, auth/session or
+  CI/CD changes, global configuration or dependency changes, file deletion,
+  destructive cleanup, or assumptions about undocumented product behavior.
+- Stop before using real credentials or secrets.
+- Permission for an initially safe task does not approve a risky action found
+  later.
+- Re-evaluate the Human Gate whenever scope expands or shared behavior or a
+  trust boundary is discovered.
+- Before approval, do not perform the change, a preparatory destructive
+  command, or an external mutation; afterward, act only within the explicitly
+  approved scope.
+- Use `vendor/qa-skills-hub/policies/human-gate-policy.md` for the full levels,
+  evidence, request procedure, and stop decision.
 
 ## Required hub sources
 
