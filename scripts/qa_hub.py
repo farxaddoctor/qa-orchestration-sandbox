@@ -164,14 +164,19 @@ def doctor(*, allow_only_staged_gitlink: bool = False) -> int:
     pass_check(3, "GITLINK", f"mode=160000; sha={tracked_sha}")
 
     # 4. Initialized submodule.
-    if not HUB_ROOT.is_dir():
-        return fail_check(4, "SUBMODULE_INIT", f"{HUB_RELATIVE_PATH} is missing", EXIT_MISSING_SUBMODULE)
-    initialized = run_git(("-C", str(HUB_ROOT), "rev-parse", "--is-inside-work-tree"))
-    if initialized.returncode != 0 or initialized.stdout.strip() != "true":
+    git_marker = HUB_ROOT / ".git"
+    if not HUB_ROOT.is_dir() or not git_marker.exists():
         return fail_check(4, "SUBMODULE_INIT", "submodule is missing or uninitialized", EXIT_MISSING_SUBMODULE)
     submodule_top = run_git(("-C", str(HUB_ROOT), "rev-parse", "--show-toplevel"))
     if submodule_top.returncode != 0:
         return fail_check(4, "SUBMODULE_INIT", process_error(submodule_top), EXIT_MISSING_SUBMODULE)
+    try:
+        detected_submodule_root = Path(submodule_top.stdout.strip()).resolve(strict=True)
+        expected_submodule_root = HUB_ROOT.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        return fail_check(4, "SUBMODULE_INIT", f"unable to resolve submodule root ({exc})", EXIT_MISSING_SUBMODULE)
+    if detected_submodule_root != expected_submodule_root:
+        return fail_check(4, "SUBMODULE_INIT", "submodule Git top-level does not match integration path", EXIT_MISSING_SUBMODULE)
     pass_check(4, "SUBMODULE_INIT", "submodule worktree initialized")
 
     # 5. Submodule HEAD equals the tracked gitlink.
