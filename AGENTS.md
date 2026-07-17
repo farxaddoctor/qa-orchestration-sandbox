@@ -15,6 +15,18 @@ content from consumer tasks, and keep all consumer-specific context in this
 repository. If the submodule is missing or uninitialized, stop and instruct the
 operator to run the future command `python scripts/qa_hub.py bootstrap`.
 
+## Evidence contract entry point
+
+Before creating or validating machine-readable evidence, agents must read
+`docs/evidence-contracts.md` and use the versioned schemas under
+`contracts/evidence/v1/`. The canonical selection manifest is
+`evidence/manifest.v1.json`.
+
+`canonical` records selection only; it does not assert acceptance. These
+contracts do not authorize Stage 7 evidence execution or acceptance,
+release-readiness, or reproducibility claims, and they do not override the
+required orchestration path, Human Gate policy, or existing restrictions.
+
 ## Required orchestration path
 
 Every QA simulation must follow:
