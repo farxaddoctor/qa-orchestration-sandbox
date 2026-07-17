@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:qa-orchestration-sandbox:evidence:v1:payload",
+  "title": "QA orchestration evidence payload",
+  "description": "Version 1 contract for a recorded simulation evidence payload.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "evidence_id",
+    "scenario_id",
+    "result_artifact",
+    "routing_trace",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^SIM-00[1-6]:[a-z0-9][a-z0-9._-]*:v1$"
+    },
+    "scenario_id": {
+      "enum": [
+        "SIM-001",
+        "SIM-002",
+        "SIM-003",
+        "SIM-004",
+        "SIM-005",
+        "SIM-006"
+      ]
+    },
+    "result_artifact": {
+      "$ref": "#/$defs/result_artifact"
+    },
+    "routing_trace": {
+      "$ref": "urn:qa-orchestration-sandbox:evidence:v1:routing-trace"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    }
+  },
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-001"
+        },
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^SIM-001:"
+        },
+        "result_artifact": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^results/SIM-001-"
+            }
+          }
+        },
+        "routing_trace": {
+          "type": "object",
+          "properties": {
+            "simulation_id": {
+              "const": "SIM-001"
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-002"
+        },
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^SIM-002:"
+        },
+        "result_artifact": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^results/SIM-002-"
+            }
+          }
+        },
+        "routing_trace": {
+          "type": "object",
+          "properties": {
+            "simulation_id": {
+              "const": "SIM-002"
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-003"
+        },
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^SIM-003:"
+        },
+        "result_artifact": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^results/SIM-003-"
+            }
+          }
+        },
+        "routing_trace": {
+          "type": "object",
+          "properties": {
+            "simulation_id": {
+              "const": "SIM-003"
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-004"
+        },
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^SIM-004:"
+        },
+        "result_artifact": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^results/SIM-004-"
+            }
+          }
+        },
+        "routing_trace": {
+          "type": "object",
+          "properties": {
+            "simulation_id": {
+              "const": "SIM-004"
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-005"
+        },
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^SIM-005:"
+        },
+        "result_artifact": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^results/SIM-005-"
+            }
+          }
+        },
+        "routing_trace": {
+          "type": "object",
+          "properties": {
+            "simulation_id": {
+              "const": "SIM-005"
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-006"
+        },
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^SIM-006:"
+        },
+        "result_artifact": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^results/SIM-006-"
+            }
+          }
+        },
+        "routing_trace": {
+          "type": "object",
+          "properties": {
+            "simulation_id": {
+              "const": "SIM-006"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "result_artifact": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^results/SIM-00[1-6][A-Za-z0-9._/-]*\\.md$",
+          "not": {
+            "pattern": "(^|/)\\.\\.(/|$)"
+          }
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "consumer_revision",
+        "hub_pin",
+        "schema_versions"
+      ],
+      "properties": {
+        "consumer_revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "hub_pin": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "schema_versions": {
+          "type": "object",
+          "required": [
+            "payload",
+            "routing_trace"
+          ],
+          "properties": {
+            "payload": {
+              "const": "1.0.0"
+            },
+            "routing_trace": {
+              "const": "1.0.0"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

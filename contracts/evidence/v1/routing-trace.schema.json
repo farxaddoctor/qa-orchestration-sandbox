@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:qa-orchestration-sandbox:evidence:v1:routing-trace",
+  "title": "QA orchestration routing trace",
+  "description": "Version 1 contract for the required Consumer simulation routing trace.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "simulation_id",
+    "status",
+    "command",
+    "constitution",
+    "policies",
+    "workflow",
+    "primary_agent",
+    "supporting_agents",
+    "skills",
+    "audit_before_edit",
+    "human_gate",
+    "stop_condition",
+    "expected_artifact"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "simulation_id": {
+      "enum": [
+        "SIM-001",
+        "SIM-002",
+        "SIM-003",
+        "SIM-004",
+        "SIM-005",
+        "SIM-006"
+      ]
+    },
+    "status": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "BLOCKED",
+        "HUMAN_APPROVAL_REQUIRED"
+      ]
+    },
+    "command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "constitution": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policies": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "workflow": {
+      "type": "string",
+      "minLength": 1
+    },
+    "primary_agent": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supporting_agents": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "audit_before_edit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "human_gate": {
+      "$ref": "#/$defs/human_gate"
+    },
+    "stop_condition": {
+      "type": "string",
+      "minLength": 1
+    },
+    "expected_artifact": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "human_gate": {
+            "type": "object",
+            "properties": {
+              "required": {
+                "const": false
+              }
+            },
+            "required": [
+              "required"
+            ]
+          }
+        },
+        "required": [
+          "human_gate"
+        ]
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "not": {
+              "const": "HUMAN_APPROVAL_REQUIRED"
+            }
+          },
+          "human_gate": {
+            "type": "object",
+            "properties": {
+              "level": {
+                "const": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "human_gate": {
+            "type": "object",
+            "properties": {
+              "required": {
+                "const": true
+              }
+            },
+            "required": [
+              "required"
+            ]
+          }
+        },
+        "required": [
+          "human_gate"
+        ]
+      },
+      "then": {
+        "properties": {
+          "human_gate": {
+            "type": "object",
+            "properties": {
+              "level": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "HUMAN_APPROVAL_REQUIRED"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "human_gate": {
+            "type": "object",
+            "properties": {
+              "required": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "human_gate": {
+      "type": "object",
+      "required": [
+        "required",
+        "level"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

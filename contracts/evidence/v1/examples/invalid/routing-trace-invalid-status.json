@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "simulation_id": "SIM-001",
+  "status": "UNKNOWN",
+  "command": "commands/qa-design.md",
+  "constitution": "constitution/qa-agent-constitution.md",
+  "policies": [
+    "policies/no-product-specific-leakage.md",
+    "policies/evidence-and-citation-policy.md",
+    "policies/human-gate-policy.md"
+  ],
+  "workflow": "workflows/requirement-to-test-plan.md",
+  "primary_agent": "agents/test-designer.md",
+  "supporting_agents": [],
+  "skills": [
+    "skills/qa-test-design/SKILL.md"
+  ],
+  "audit_before_edit": "Not required; this is read-only analysis with no implementation handoff.",
+  "human_gate": {
+    "required": false,
+    "level": 0
+  },
+  "stop_condition": "Stop if undocumented behavior would be presented as confirmed or any file modification is attempted.",
+  "expected_artifact": "Read-only test-design summary, scenario matrix, risks, test levels, assumptions, and open questions."
+}
