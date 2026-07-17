@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "simulation_id": "SIM-002",
+  "status": "PASS",
+  "command": "commands/qa-automate.md",
+  "constitution": "constitution/qa-agent-constitution.md",
+  "policies": [
+    "policies/audit-before-edit.md",
+    "policies/human-gate-policy.md",
+    "policies/safe-refactor-policy.md",
+    "policies/no-product-specific-leakage.md"
+  ],
+  "workflow": "workflows/test-plan-to-automation.md",
+  "primary_agent": "agents/automation-engineer.md",
+  "supporting_agents": [],
+  "skills": [
+    "skills/playwright-typescript/SKILL.md"
+  ],
+  "audit_before_edit": "Completed before the approved scoped change.",
+  "human_gate": {
+    "required": true,
+    "level": 3,
+    "approval_state": "APPROVED",
+    "approved_scope": "Modify only the explicitly approved authentication/session setup within the reviewed scope."
+  },
+  "stop_condition": "Stop if implementation would exceed the approved scope or introduce a new trust boundary.",
+  "expected_artifact": "Validated output produced within the recorded approved scope."
+}

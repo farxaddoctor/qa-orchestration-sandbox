@@ -221,7 +221,7 @@
       "properties": {
         "path": {
           "type": "string",
-          "pattern": "^results/SIM-00[1-6][A-Za-z0-9._/-]*\\.md$",
+          "pattern": "^results/SIM-00[1-6]-[A-Za-z0-9._/-]+\\.md$",
           "not": {
             "pattern": "(^|/)\\.\\.(/|$)"
           }

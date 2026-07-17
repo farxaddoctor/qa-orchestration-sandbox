@@ -3,7 +3,7 @@
   "evidence_id": "SIM-001:example-payload:v1",
   "scenario_id": "SIM-001",
   "result_artifact": {
-    "path": "results/SIM-001-qa-design.md",
+    "path": "results/SIM-001-.md",
     "sha256": "cdf2ddd4aa30b811a1361b988fa606085b3aef61334580e27918787b86d0408c"
   },
   "routing_trace": {

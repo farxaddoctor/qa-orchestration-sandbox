@@ -18,7 +18,9 @@
   "audit_before_edit": "Not required; this is read-only analysis with no implementation handoff.",
   "human_gate": {
     "required": false,
-    "level": 0
+    "level": 0,
+    "approval_state": "NOT_REQUIRED",
+    "approved_scope": null
   },
   "stop_condition": "Stop if undocumented behavior would be presented as confirmed or any file modification is attempted.",
   "expected_artifact": "Read-only test-design summary, scenario matrix, risks, test levels, assumptions, and open questions."

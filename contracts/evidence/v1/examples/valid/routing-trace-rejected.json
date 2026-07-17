@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "simulation_id": "SIM-002",
+  "status": "BLOCKED",
+  "command": "commands/qa-automate.md",
+  "constitution": "constitution/qa-agent-constitution.md",
+  "policies": [
+    "policies/audit-before-edit.md",
+    "policies/human-gate-policy.md",
+    "policies/safe-refactor-policy.md",
+    "policies/no-product-specific-leakage.md"
+  ],
+  "workflow": "workflows/test-plan-to-automation.md",
+  "primary_agent": "agents/automation-engineer.md",
+  "supporting_agents": [],
+  "skills": [
+    "skills/playwright-typescript/SKILL.md"
+  ],
+  "audit_before_edit": "Completed before the approval request was rejected.",
+  "human_gate": {
+    "required": true,
+    "level": 3,
+    "approval_state": "REJECTED",
+    "approved_scope": null
+  },
+  "stop_condition": "Stop because the requested Level 3 action was rejected.",
+  "expected_artifact": "Blocked handoff recording the rejected approval decision."
+}
