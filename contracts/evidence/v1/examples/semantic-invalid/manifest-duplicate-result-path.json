@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0.0",
+  "manifest_id": "qa-orchestration-evidence-manifest-example:v1",
+  "provenance": {
+    "consumer_revision": "777f7d5cc5017260df04c012eae963ef3ad63379",
+    "hub_pin": "81197bf84ed51913bc3a93ace41661ab80a8e3b9",
+    "schema_versions": {
+      "payload": "1.0.0",
+      "routing_trace": "1.0.0",
+      "manifest": "1.0.0"
+    }
+  },
+  "scenarios": {
+    "SIM-001": {
+      "scenario_id": "SIM-001",
+      "canonical": {
+        "evidence_id": "SIM-001:qa-design:v1",
+        "result_path": "results/SIM-001-qa-design.md",
+        "sha256": "cdf2ddd4aa30b811a1361b988fa606085b3aef61334580e27918787b86d0408c"
+      },
+      "historical_attempts": [
+        {
+          "evidence_id": "SIM-001:attempt-2-oracle-fail:v1",
+          "result_path": "results/SIM-001-attempt-2-oracle-fail.md",
+          "sha256": "dcfa55ae4b26c377a41e9d12e6a81de6809b33cb017166e5707481d2a7396826"
+        },
+        {
+          "evidence_id": "SIM-001:duplicate-result-path:v1",
+          "result_path": "results/SIM-001-attempt-2-oracle-fail.md",
+          "sha256": "dcfa55ae4b26c377a41e9d12e6a81de6809b33cb017166e5707481d2a7396826"
+        }
+      ]
+    },
+    "SIM-002": {
+      "scenario_id": "SIM-002",
+      "canonical": {
+        "evidence_id": "SIM-002:qa-automate:v1",
+        "result_path": "results/SIM-002-qa-automate.md",
+        "sha256": "781d49abb107a192ce47cd3ecc94340715254e1e28e17f4ed1a42eca8713f3dd"
+      },
+      "historical_attempts": []
+    },
+    "SIM-003": {
+      "scenario_id": "SIM-003",
+      "canonical": {
+        "evidence_id": "SIM-003:qa-review:v1",
+        "result_path": "results/SIM-003-qa-review.md",
+        "sha256": "01810d3da984c8b052b726443b3dbbb6a03a0b9e91a40684a828e973559e0dfd"
+      },
+      "historical_attempts": []
+    },
+    "SIM-004": {
+      "scenario_id": "SIM-004",
+      "canonical": {
+        "evidence_id": "SIM-004:qa-audit:v1",
+        "result_path": "results/SIM-004-qa-audit.md",
+        "sha256": "5d4e05c2f7dbffa5389eb86f186defa6ade943b8b68f0cb82759badfbca2976d"
+      },
+      "historical_attempts": []
+    },
+    "SIM-005": {
+      "scenario_id": "SIM-005",
+      "canonical": {
+        "evidence_id": "SIM-005:qa-debug:v1",
+        "result_path": "results/SIM-005-qa-debug.md",
+        "sha256": "08254bcde0e07ebd800c8f1335b905d58e56a73c9657746aa31abfcb77e1a546"
+      },
+      "historical_attempts": []
+    },
+    "SIM-006": {
+      "scenario_id": "SIM-006",
+      "canonical": {
+        "evidence_id": "SIM-006:qa-bug-report:v1",
+        "result_path": "results/SIM-006-qa-bug-report.md",
+        "sha256": "774c38f29ac35e84be4743c6421c6b07694763ad5a656306f4a9c7fc1afa4d1b"
+      },
+      "historical_attempts": []
+    }
+  }
+}

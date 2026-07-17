@@ -2,7 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:qa-orchestration-sandbox:evidence:v1:manifest",
   "title": "QA orchestration evidence manifest",
-  "description": "Version 1 canonical selection manifest. A canonical entry records selection only; it does not assert acceptance, release readiness, or reproducibility.",
+  "description": "Version 1 canonical selection manifest. A canonical entry records selection only; it does not assert acceptance, release readiness, or reproducibility. Draft 2020-12 validates structure but does not enforce the cross-object semantic invariants recorded in $comment.",
+  "$comment": "Semantic invariants deferred to Stage 7 validation: canonical and historical_attempts must be disjoint. evidence_id and result_path are independent identity keys across their union: every evidence_id must be unique and every result_path must be unique; repeating either key is invalid regardless of the other fields or sha256. An evidence_id identifies exactly one result_path/sha256 association, and a result_path identifies exactly one evidence_id/sha256 association; because repetition of either key is forbidden, conflicting hashes for a repeated key are also forbidden. The current Draft 2020-12 object shape does not enforce these invariants.",
   "type": "object",
   "required": [
     "schema_version",

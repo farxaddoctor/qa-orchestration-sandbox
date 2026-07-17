@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "simulation_id": "SIM-002",
+  "status": "HUMAN_APPROVAL_REQUIRED",
+  "command": "commands/qa-automate.md",
+  "constitution": "constitution/qa-agent-constitution.md",
+  "policies": [
+    "policies/audit-before-edit.md",
+    "policies/human-gate-policy.md",
+    "policies/safe-refactor-policy.md",
+    "policies/no-product-specific-leakage.md"
+  ],
+  "workflow": "workflows/test-plan-to-automation.md",
+  "primary_agent": "agents/automation-engineer.md",
+  "supporting_agents": [],
+  "skills": [
+    "skills/playwright-typescript/SKILL.md"
+  ],
+  "audit_before_edit": "Required before any shared fixture or authentication/session change.",
+  "human_gate": {
+    "required": true,
+    "level": 3,
+    "approval_state": "PENDING",
+    "approved_scope": null
+  },
+  "stop_condition": "Stop before implementation until explicit Level 3 approval is granted.",
+  "expected_artifact": "Automation strategy, scoped implementation plan, risk notes, validation plan, and approval request."
+}

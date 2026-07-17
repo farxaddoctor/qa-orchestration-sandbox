@@ -18,6 +18,8 @@ Version 1 is stored under `contracts/evidence/v1/`. All three schemas use JSON S
 
 The directory version (`v1`), schema IDs, and `schema_version` fields are explicit version boundaries. A future incompatible contract belongs in a new versioned location and must not silently change the meaning of v1 data.
 
+The current in-place changes correct a rejected, pre-acceptance Stage 6 v1 candidate before Stage 6 closeout. Version 1 has not been accepted, released, declared release-ready, or claimed reproducible. The directory, schema IDs, and `schema_version: 1.0.0` therefore remain unchanged while the rejected candidate's intended Human Gate and artifact-path semantics are corrected.
+
 ## Payload contract
 
 The payload records one scenario result together with its routing trace and provenance. The top-level object requires:
@@ -31,7 +33,7 @@ The payload records one scenario result together with its routing trace and prov
 
 The selected `scenario_id` constrains the prefixes of `evidence_id` and `result_artifact.path`, and it must match `routing_trace.simulation_id`. A result artifact requires:
 
-- `path`: a scenario-matching Markdown path under `results/`; parent-directory traversal is forbidden.
+- `path`: a scenario-matching Markdown path under `results/` matching `^results/SIM-00[1-6]-[A-Za-z0-9._/-]+\.md$`; at least one character is required after the scenario prefix and parent-directory traversal is forbidden.
 - `sha256`: exactly 64 lowercase hexadecimal characters.
 
 Payload provenance requires 40-character lowercase hexadecimal values for `consumer_revision` and `hub_pin`. Its `schema_versions` object requires `payload` and `routing_trace`, both set to `1.0.0`.
@@ -57,11 +59,16 @@ The routing trace captures the required orchestration path for one simulation. I
 
 `simulation_id` is limited to `SIM-001` through `SIM-006`. `status` is limited to `PASS`, `FAIL`, `BLOCKED`, or `HUMAN_APPROVAL_REQUIRED`. String routing fields must be non-empty. `policies` and `skills` must each contain at least one unique, non-empty string. `supporting_agents` may be empty, but any entries must be unique, non-empty strings.
 
-`human_gate` requires both `required` and `level`:
+`human_gate` requires `required`, `level`, `approval_state`, and `approved_scope`. `required` is `true` when the action is governed by Level 1 through 3 approval, regardless of whether approval is pending, approved, or rejected. `approved_scope` is either `null` or a non-empty string containing at least one non-whitespace character.
 
-- When `required` is `false`, `level` must be `0`, and the status cannot be `HUMAN_APPROVAL_REQUIRED`.
-- When `required` is `true`, `level` must be an integer from `1` through `3`.
-- When status is `HUMAN_APPROVAL_REQUIRED`, `required` must be `true`.
+| Status | `required` | `level` | `approval_state` | `approved_scope` |
+| --- | --- | --- | --- | --- |
+| `PASS`, `FAIL`, or `BLOCKED` | `false` | `0` | `NOT_REQUIRED` | `null` |
+| `HUMAN_APPROVAL_REQUIRED` | `true` | `1` through `3` | `PENDING` | `null` |
+| `PASS`, `FAIL`, or `BLOCKED` | `true` | `1` through `3` | `APPROVED` | Non-empty, non-whitespace string |
+| `BLOCKED` | `true` | `1` through `3` | `REJECTED` | `null` |
+
+The schema encodes this matrix in both the Human Gate object and the routing-trace status conditions. A pending or rejected gate cannot validate with `PASS`, and an approved gate cannot validate without a recorded approved scope.
 
 ## Manifest contract
 
@@ -87,6 +94,17 @@ All contract objects use `additionalProperties: false`; undeclared fields are re
 `canonical` records which result is selected as the primary result for a scenario. Selection is not acceptance and does not make a claim about oracle correctness, release readiness, or reproducibility. The schema permits `canonical: null` when no result has been selected, but the current manifest selects one result for each of the six scenarios.
 
 `historical_attempts` records non-canonical attempts separately. The only historical attempt currently recorded is `results/SIM-001-attempt-2-oracle-fail.md`; it is not the canonical SIM-001 result.
+
+Draft 2020-12 directly enforces descriptor shape, scenario prefixes, digest syntax, closed objects, and exact-object uniqueness within `historical_attempts`. With the current object shape it does not compare values across `canonical` and `historical_attempts`. `evidence_id` and `result_path` are independent identity keys. The following are mandatory out-of-schema semantic invariants across the union of `canonical` and `historical_attempts`:
+
+- `canonical` and `historical_attempts` must be disjoint.
+- Every `evidence_id` must be unique; repeating an `evidence_id` is invalid regardless of the associated `result_path` or SHA-256.
+- Every `result_path` must be unique; repeating a `result_path` is invalid regardless of the associated `evidence_id` or SHA-256.
+- An `evidence_id` identifies exactly one `result_path`/SHA-256 association.
+- A `result_path` identifies exactly one `evidence_id`/SHA-256 association.
+- Because repetition of either identity key is forbidden, conflicting hashes for a repeated key are also forbidden.
+
+The examples under `contracts/evidence/v1/examples/semantic-invalid/` intentionally pass JSON Schema validation while violating these invariants. They are unacceptable as evidence. `manifest-canonical-in-history.json` is intentionally compound: exact reappearance of the canonical descriptor in `historical_attempts` demonstrates canonical/history overlap and necessarily also repeats its `evidence_id` and `result_path`; it is not claimed to isolate only one invariant. `manifest-duplicate-evidence-id.json` isolates a repeated `evidence_id` while using a distinct `result_path`, and `manifest-duplicate-result-path.json` isolates a repeated `result_path` while using a distinct `evidence_id`. Enforcing these cross-object invariants requires Stage 7 semantic validation; Stage 6 documents the boundary and does not implement that validator.
 
 ## Current manifest mapping
 
@@ -117,15 +135,28 @@ Provenance and digests identify the recorded inputs; they do not by themselves d
 
 ## Examples
 
-The example set contains one valid and one intentionally invalid document for each contract:
+The example set covers the four Human Gate states, the aligned artifact-path rule, and the documented manifest semantic boundary:
 
-| Contract | Valid example | Invalid example | Intended invalid reason |
-| --- | --- | --- | --- |
-| Routing trace | `contracts/evidence/v1/examples/valid/routing-trace.json` | `contracts/evidence/v1/examples/invalid/routing-trace-invalid-status.json` | `status` is `UNKNOWN`, outside the allowed enum. |
-| Payload | `contracts/evidence/v1/examples/valid/payload.json` | `contracts/evidence/v1/examples/invalid/payload-human-gate-mismatch.json` | `human_gate.required` is `false` while `level` is `2`. |
-| Manifest | `contracts/evidence/v1/examples/valid/manifest.json` | `contracts/evidence/v1/examples/invalid/manifest-missing-canonical.json` | The required `canonical` field is missing from `SIM-006`. |
+| Schema expectation | Example | Purpose |
+| --- | --- | --- |
+| Valid | `examples/valid/routing-trace.json` | `NOT_REQUIRED` with `PASS` |
+| Valid | `examples/valid/routing-trace-pending.json` | `PENDING` with `HUMAN_APPROVAL_REQUIRED` |
+| Valid | `examples/valid/routing-trace-approved.json` | `APPROVED` with a recorded scope |
+| Valid | `examples/valid/routing-trace-rejected.json` | `REJECTED` with `BLOCKED` |
+| Invalid | `examples/invalid/routing-trace-invalid-status.json` | `status` is outside the enum |
+| Invalid | `examples/invalid/routing-trace-unapproved-pass.json` | A pending gate reports `PASS` |
+| Invalid | `examples/invalid/routing-trace-approved-missing-scope.json` | An approved gate has no scope |
+| Invalid | `examples/invalid/routing-trace-rejected-pass.json` | A rejected gate reports `PASS` |
+| Valid | `examples/valid/payload.json` | Valid payload and nested routing trace |
+| Invalid | `examples/invalid/payload-human-gate-mismatch.json` | `NOT_REQUIRED` uses nonzero level |
+| Invalid | `examples/invalid/payload-empty-artifact-name.json` | Artifact path is `results/SIM-001-.md` |
+| Valid | `examples/valid/manifest.json` | Structurally valid manifest |
+| Invalid | `examples/invalid/manifest-missing-canonical.json` | Required `canonical` is missing from `SIM-006` |
+| Schema-valid, semantic-invalid | `examples/semantic-invalid/manifest-canonical-in-history.json` | Compound fixture: the canonical descriptor is also historical, necessarily repeating both identity keys |
+| Schema-valid, semantic-invalid | `examples/semantic-invalid/manifest-duplicate-evidence-id.json` | `evidence_id` is duplicated while `result_path` remains distinct |
+| Schema-valid, semantic-invalid | `examples/semantic-invalid/manifest-duplicate-result-path.json` | `result_path` is duplicated while `evidence_id` remains distinct |
 
-Each invalid example differs from its valid counterpart only in the condition named by the invalid example.
+Paths in this table are relative to `contracts/evidence/v1/`. Each schema-invalid example differs structurally from its valid base only in its named condition. Semantic-invalid examples are expected to pass Ajv and remain unacceptable as evidence.
 
 ## Local validation with Ajv
 
@@ -133,15 +164,25 @@ Run these commands from the Consumer repository root. They use pinned, ephemeral
 
 ```powershell
 npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/valid/routing-trace.json --valid
+npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/valid/routing-trace-pending.json --valid
+npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/valid/routing-trace-approved.json --valid
+npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/valid/routing-trace-rejected.json --valid
 npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/invalid/routing-trace-invalid-status.json --invalid
+npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/invalid/routing-trace-unapproved-pass.json --invalid
+npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/invalid/routing-trace-approved-missing-scope.json --invalid
+npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/invalid/routing-trace-rejected-pass.json --invalid
 npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/payload.schema.json -r contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/valid/payload.json --valid
 npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/payload.schema.json -r contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/invalid/payload-human-gate-mismatch.json --invalid
+npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/payload.schema.json -r contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/invalid/payload-empty-artifact-name.json --invalid
 npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d contracts/evidence/v1/examples/valid/manifest.json --valid
 npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d contracts/evidence/v1/examples/invalid/manifest-missing-canonical.json --invalid
 npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d evidence/manifest.v1.json --valid
+npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d contracts/evidence/v1/examples/semantic-invalid/manifest-canonical-in-history.json --valid
+npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d contracts/evidence/v1/examples/semantic-invalid/manifest-duplicate-evidence-id.json --valid
+npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d contracts/evidence/v1/examples/semantic-invalid/manifest-duplicate-result-path.json --valid
 ```
 
-These are local contract assertions. Stage 6 does not add repository CI enforcement for schema or manifest validation.
+These are local contract assertions. The final three assertions deliberately confirm the boundary between schema validation and unacceptable semantic evidence; they do not accept those manifests. Stage 6 does not add repository CI enforcement or semantic-validator implementation for schema or manifest validation.
 
 ## Encoding and line endings
 
