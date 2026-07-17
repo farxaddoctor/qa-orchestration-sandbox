@@ -95,14 +95,16 @@ All contract objects use `additionalProperties: false`; undeclared fields are re
 
 `historical_attempts` records non-canonical attempts separately. The only historical attempt currently recorded is `results/SIM-001-attempt-2-oracle-fail.md`; it is not the canonical SIM-001 result.
 
-Draft 2020-12 directly enforces descriptor shape, scenario prefixes, digest syntax, closed objects, and exact-object uniqueness within `historical_attempts`. With the current object shape it does not compare values across `canonical` and `historical_attempts`. The following are mandatory out-of-schema semantic invariants:
+Draft 2020-12 directly enforces descriptor shape, scenario prefixes, digest syntax, closed objects, and exact-object uniqueness within `historical_attempts`. With the current object shape it does not compare values across `canonical` and `historical_attempts`. `evidence_id` and `result_path` are independent identity keys. The following are mandatory out-of-schema semantic invariants across the union of `canonical` and `historical_attempts`:
 
 - `canonical` and `historical_attempts` must be disjoint.
-- `evidence_id` must be unique across their union.
-- `result_path` must be unique across their union.
-- One identity must not carry conflicting hashes.
+- Every `evidence_id` must be unique; repeating an `evidence_id` is invalid regardless of the associated `result_path` or SHA-256.
+- Every `result_path` must be unique; repeating a `result_path` is invalid regardless of the associated `evidence_id` or SHA-256.
+- An `evidence_id` identifies exactly one `result_path`/SHA-256 association.
+- A `result_path` identifies exactly one `evidence_id`/SHA-256 association.
+- Because repetition of either identity key is forbidden, conflicting hashes for a repeated key are also forbidden.
 
-The examples under `contracts/evidence/v1/examples/semantic-invalid/` intentionally pass JSON Schema validation while violating these invariants. They are unacceptable as evidence. Enforcing these cross-object invariants requires Stage 7 semantic validation; Stage 6 documents the boundary and does not implement that validator.
+The examples under `contracts/evidence/v1/examples/semantic-invalid/` intentionally pass JSON Schema validation while violating these invariants. They are unacceptable as evidence. `manifest-canonical-in-history.json` is intentionally compound: exact reappearance of the canonical descriptor in `historical_attempts` demonstrates canonical/history overlap and necessarily also repeats its `evidence_id` and `result_path`; it is not claimed to isolate only one invariant. `manifest-duplicate-evidence-id.json` isolates a repeated `evidence_id` while using a distinct `result_path`, and `manifest-duplicate-result-path.json` isolates a repeated `result_path` while using a distinct `evidence_id`. Enforcing these cross-object invariants requires Stage 7 semantic validation; Stage 6 documents the boundary and does not implement that validator.
 
 ## Current manifest mapping
 
@@ -150,9 +152,9 @@ The example set covers the four Human Gate states, the aligned artifact-path rul
 | Invalid | `examples/invalid/payload-empty-artifact-name.json` | Artifact path is `results/SIM-001-.md` |
 | Valid | `examples/valid/manifest.json` | Structurally valid manifest |
 | Invalid | `examples/invalid/manifest-missing-canonical.json` | Required `canonical` is missing from `SIM-006` |
-| Schema-valid, semantic-invalid | `examples/semantic-invalid/manifest-canonical-in-history.json` | Canonical descriptor is also historical |
-| Schema-valid, semantic-invalid | `examples/semantic-invalid/manifest-duplicate-evidence-id.json` | `evidence_id` is duplicated |
-| Schema-valid, semantic-invalid | `examples/semantic-invalid/manifest-duplicate-result-path.json` | `result_path` is duplicated |
+| Schema-valid, semantic-invalid | `examples/semantic-invalid/manifest-canonical-in-history.json` | Compound fixture: the canonical descriptor is also historical, necessarily repeating both identity keys |
+| Schema-valid, semantic-invalid | `examples/semantic-invalid/manifest-duplicate-evidence-id.json` | `evidence_id` is duplicated while `result_path` remains distinct |
+| Schema-valid, semantic-invalid | `examples/semantic-invalid/manifest-duplicate-result-path.json` | `result_path` is duplicated while `evidence_id` remains distinct |
 
 Paths in this table are relative to `contracts/evidence/v1/`. Each schema-invalid example differs structurally from its valid base only in its named condition. Semantic-invalid examples are expected to pass Ajv and remain unacceptable as evidence.
 
