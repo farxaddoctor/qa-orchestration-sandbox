@@ -1,0 +1,431 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:qa-orchestration-sandbox:evidence:v1:manifest",
+  "title": "QA orchestration evidence manifest",
+  "description": "Version 1 canonical selection manifest. A canonical entry records selection only; it does not assert acceptance, release readiness, or reproducibility.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "manifest_id",
+    "provenance",
+    "scenarios"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "manifest_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._:-]*:v1$"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "scenarios": {
+      "type": "object",
+      "required": [
+        "SIM-001",
+        "SIM-002",
+        "SIM-003",
+        "SIM-004",
+        "SIM-005",
+        "SIM-006"
+      ],
+      "properties": {
+        "SIM-001": {
+          "$ref": "#/$defs/scenario_sim_001"
+        },
+        "SIM-002": {
+          "$ref": "#/$defs/scenario_sim_002"
+        },
+        "SIM-003": {
+          "$ref": "#/$defs/scenario_sim_003"
+        },
+        "SIM-004": {
+          "$ref": "#/$defs/scenario_sim_004"
+        },
+        "SIM-005": {
+          "$ref": "#/$defs/scenario_sim_005"
+        },
+        "SIM-006": {
+          "$ref": "#/$defs/scenario_sim_006"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": [
+        "consumer_revision",
+        "hub_pin",
+        "schema_versions"
+      ],
+      "properties": {
+        "consumer_revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "hub_pin": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "schema_versions": {
+          "type": "object",
+          "required": [
+            "payload",
+            "routing_trace",
+            "manifest"
+          ],
+          "properties": {
+            "payload": {
+              "const": "1.0.0"
+            },
+            "routing_trace": {
+              "const": "1.0.0"
+            },
+            "manifest": {
+              "const": "1.0.0"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "artifact_descriptor": {
+      "type": "object",
+      "required": [
+        "evidence_id",
+        "result_path",
+        "sha256"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^SIM-00[1-6]:[a-z0-9][a-z0-9._-]*:v1$"
+        },
+        "result_path": {
+          "type": "string",
+          "pattern": "^results/SIM-00[1-6]-[A-Za-z0-9._/-]+\\.md$",
+          "not": {
+            "pattern": "(^|/)\\.\\.(/|$)"
+          }
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "scenario_sim_001": {
+      "type": "object",
+      "required": [
+        "scenario_id",
+        "canonical",
+        "historical_attempts"
+      ],
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-001"
+        },
+        "canonical": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/artifact_sim_001"
+            }
+          ]
+        },
+        "historical_attempts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/artifact_sim_001"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "scenario_sim_002": {
+      "type": "object",
+      "required": [
+        "scenario_id",
+        "canonical",
+        "historical_attempts"
+      ],
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-002"
+        },
+        "canonical": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/artifact_sim_002"
+            }
+          ]
+        },
+        "historical_attempts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/artifact_sim_002"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "scenario_sim_003": {
+      "type": "object",
+      "required": [
+        "scenario_id",
+        "canonical",
+        "historical_attempts"
+      ],
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-003"
+        },
+        "canonical": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/artifact_sim_003"
+            }
+          ]
+        },
+        "historical_attempts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/artifact_sim_003"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "scenario_sim_004": {
+      "type": "object",
+      "required": [
+        "scenario_id",
+        "canonical",
+        "historical_attempts"
+      ],
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-004"
+        },
+        "canonical": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/artifact_sim_004"
+            }
+          ]
+        },
+        "historical_attempts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/artifact_sim_004"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "scenario_sim_005": {
+      "type": "object",
+      "required": [
+        "scenario_id",
+        "canonical",
+        "historical_attempts"
+      ],
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-005"
+        },
+        "canonical": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/artifact_sim_005"
+            }
+          ]
+        },
+        "historical_attempts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/artifact_sim_005"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "scenario_sim_006": {
+      "type": "object",
+      "required": [
+        "scenario_id",
+        "canonical",
+        "historical_attempts"
+      ],
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-006"
+        },
+        "canonical": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/artifact_sim_006"
+            }
+          ]
+        },
+        "historical_attempts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/artifact_sim_006"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "artifact_sim_001": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/artifact_descriptor"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence_id": {
+              "type": "string",
+              "pattern": "^SIM-001:"
+            },
+            "result_path": {
+              "type": "string",
+              "pattern": "^results/SIM-001-"
+            }
+          }
+        }
+      ]
+    },
+    "artifact_sim_002": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/artifact_descriptor"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence_id": {
+              "type": "string",
+              "pattern": "^SIM-002:"
+            },
+            "result_path": {
+              "type": "string",
+              "pattern": "^results/SIM-002-"
+            }
+          }
+        }
+      ]
+    },
+    "artifact_sim_003": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/artifact_descriptor"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence_id": {
+              "type": "string",
+              "pattern": "^SIM-003:"
+            },
+            "result_path": {
+              "type": "string",
+              "pattern": "^results/SIM-003-"
+            }
+          }
+        }
+      ]
+    },
+    "artifact_sim_004": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/artifact_descriptor"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence_id": {
+              "type": "string",
+              "pattern": "^SIM-004:"
+            },
+            "result_path": {
+              "type": "string",
+              "pattern": "^results/SIM-004-"
+            }
+          }
+        }
+      ]
+    },
+    "artifact_sim_005": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/artifact_descriptor"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence_id": {
+              "type": "string",
+              "pattern": "^SIM-005:"
+            },
+            "result_path": {
+              "type": "string",
+              "pattern": "^results/SIM-005-"
+            }
+          }
+        }
+      ]
+    },
+    "artifact_sim_006": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/artifact_descriptor"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence_id": {
+              "type": "string",
+              "pattern": "^SIM-006:"
+            },
+            "result_path": {
+              "type": "string",
+              "pattern": "^results/SIM-006-"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
