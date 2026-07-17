@@ -36,6 +36,8 @@ jobs:
           python-version: '3.12'
       - name: Run consumer integration doctor
         run: python scripts/qa_hub.py doctor
+      - name: Validate result encoding
+        run: python -B scripts/validate_result_encoding.py
       - name: Run hub static validator
         working-directory: vendor/qa-skills-hub
         run: python scripts/validate_repository.py
