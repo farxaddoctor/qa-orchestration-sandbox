@@ -34,10 +34,52 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run sandbox validator unit tests
+        run: python -B -m unittest tests/test_validate_sandbox.py
+      - name: Run sandbox validator foundation
+        run: python -B scripts/validate_sandbox.py
       - name: Run consumer integration doctor
         run: python scripts/qa_hub.py doctor
       - name: Validate result encoding
         run: python -B scripts/validate_result_encoding.py
+      - name: Ajv routing trace valid default
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/valid/routing-trace.json --valid
+      - name: Ajv routing trace valid pending
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/valid/routing-trace-pending.json --valid
+      - name: Ajv routing trace valid approved
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/valid/routing-trace-approved.json --valid
+      - name: Ajv routing trace valid rejected
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/valid/routing-trace-rejected.json --valid
+      - name: Ajv routing trace invalid status
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/invalid/routing-trace-invalid-status.json --invalid
+      - name: Ajv routing trace unapproved pass
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/invalid/routing-trace-unapproved-pass.json --invalid
+      - name: Ajv routing trace approved missing scope
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/invalid/routing-trace-approved-missing-scope.json --invalid
+      - name: Ajv routing trace rejected pass
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/invalid/routing-trace-rejected-pass.json --invalid
+      - name: Ajv payload valid
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/payload.schema.json -r contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/valid/payload.json --valid
+      - name: Ajv payload human gate mismatch
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/payload.schema.json -r contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/invalid/payload-human-gate-mismatch.json --invalid
+      - name: Ajv payload empty artifact name
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/payload.schema.json -r contracts/evidence/v1/routing-trace.schema.json -d contracts/evidence/v1/examples/invalid/payload-empty-artifact-name.json --invalid
+      - name: Ajv manifest valid example
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d contracts/evidence/v1/examples/valid/manifest.json --valid
+      - name: Ajv manifest missing canonical
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d contracts/evidence/v1/examples/invalid/manifest-missing-canonical.json --invalid
+      - name: Ajv manifest current
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d evidence/manifest.v1.json --valid
+      - name: Ajv semantic invalid canonical in history
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d contracts/evidence/v1/examples/semantic-invalid/manifest-canonical-in-history.json --valid
+      - name: Ajv semantic invalid duplicate evidence id
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d contracts/evidence/v1/examples/semantic-invalid/manifest-duplicate-evidence-id.json --valid
+      - name: Ajv semantic invalid duplicate result path
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d contracts/evidence/v1/examples/semantic-invalid/manifest-duplicate-result-path.json --valid
       - name: Run hub static validator
         working-directory: vendor/qa-skills-hub
         run: python scripts/validate_repository.py
