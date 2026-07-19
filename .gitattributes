@@ -1,3 +1,5 @@
 results/*.md text eol=lf
 contracts/evidence/v1/**/*.json text eol=lf
 evidence/*.json text eol=lf
+contracts/execution/v1/**/*.json text eol=lf
+evidence/runs/**/*.json text eol=lf

@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "S7-SIM-002-P1-R01",
+  "cohort_id": "P2",
+  "scenario_id": "SIM-002",
+  "execution_role": "PRIMARY",
+  "attempt_number": 1,
+  "executor_id": "synthetic-executor-primary-a",
+  "started_at": "2026-01-01T00:00:00Z",
+  "completed_at": "2026-01-01T00:05:00Z",
+  "model_id": "synthetic-model-stage7-v1",
+  "execution_surface": {
+    "name": "synthetic-codex-surface",
+    "version": "stage7-contract-example"
+  },
+  "environment": {
+    "os": {
+      "name": "SyntheticOS",
+      "version": "2026.01"
+    },
+    "architecture": "x64"
+  },
+  "runtime_versions": {
+    "python": "3.12.0",
+    "git": "2.50.0",
+    "node": "22.0.0",
+    "npm": "10.0.0",
+    "npx": "10.0.0",
+    "ajv_cli": "5.0.0",
+    "sandbox_validator": "stage7-candidate"
+  },
+  "provenance": {
+    "consumer_execution_input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "hub_pin": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "schema_versions": {
+      "payload": "1.0.0",
+      "routing_trace": "1.0.0",
+      "run_record": "1.0.0"
+    }
+  },
+  "inputs": {
+    "scenario": {
+      "path": "scenarios/SIM-002-qa-automate.md",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "fixtures": [
+      {
+        "path": "fixtures/automation/approved-test-plan.md",
+        "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    ],
+    "oracle": {
+      "path": "expected/SIM-002-expected.md",
+      "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    }
+  },
+  "artifacts": {
+    "payload": {
+      "path": "evidence/runs/SIM-002/S7-SIM-002-P1-R01.payload.json",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "evidence_id": "SIM-002:stage7-p1-r01:v1"
+    },
+    "result": {
+      "path": "results/SIM-002-stage7-p1-r01.md",
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  }
+}

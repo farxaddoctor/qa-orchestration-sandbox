@@ -1,0 +1,832 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:qa-orchestration-sandbox:execution:v1:run-record",
+  "title": "QA orchestration Stage 7 run record",
+  "description": "Version 1 contract for a separate Stage 7 execution run record. This contract records run provenance and artifact references only; it does not redefine evidence payload v1, select canonical evidence, assert acceptance, or authorize controlled execution.",
+  "$comment": "Out-of-schema semantic invariants deferred to a future approved validator: run_id cohort segment must equal cohort_id; attempt_number must correspond to the R<NN> segment; completed_at must not precede started_at; every scenario cohort must contain exactly two PRIMARY runs and one INDEPENDENT_REPRODUCTION run; referenced files must exist as safe regular non-link files and their SHA-256 values must match; payload, result, evidence, routing trace, and run-record identities must align; execution-input revision and oracle hashes must be identical across an approved cohort; SIM-002 pilot completion must precede any other scenario cohort; canonical manifest selection remains separate from acceptance.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "cohort_id",
+    "scenario_id",
+    "execution_role",
+    "attempt_number",
+    "executor_id",
+    "started_at",
+    "completed_at",
+    "model_id",
+    "execution_surface",
+    "environment",
+    "runtime_versions",
+    "provenance",
+    "inputs",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "run_id": {
+      "$ref": "#/$defs/run_id"
+    },
+    "cohort_id": {
+      "enum": [
+        "P1",
+        "P2",
+        "IR"
+      ]
+    },
+    "scenario_id": {
+      "$ref": "#/$defs/scenario_id"
+    },
+    "execution_role": {
+      "enum": [
+        "PRIMARY",
+        "INDEPENDENT_REPRODUCTION"
+      ]
+    },
+    "attempt_number": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 99
+    },
+    "executor_id": {
+      "type": "string",
+      "pattern": "^synthetic-executor-[a-z0-9][a-z0-9-]{2,63}$"
+    },
+    "started_at": {
+      "$ref": "#/$defs/utc_date_time"
+    },
+    "completed_at": {
+      "$ref": "#/$defs/utc_date_time"
+    },
+    "model_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "execution_surface": {
+      "$ref": "#/$defs/execution_surface"
+    },
+    "environment": {
+      "$ref": "#/$defs/environment"
+    },
+    "runtime_versions": {
+      "$ref": "#/$defs/runtime_versions"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "inputs": {
+      "$ref": "#/$defs/inputs"
+    },
+    "artifacts": {
+      "$ref": "#/$defs/artifacts"
+    }
+  },
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-001"
+        },
+        "run_id": {
+          "type": "string",
+          "pattern": "^S7-SIM-001-"
+        },
+        "inputs": {
+          "type": "object",
+          "properties": {
+            "scenario": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^scenarios/SIM-001-"
+                }
+              }
+            },
+            "oracle": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^expected/SIM-001-"
+                }
+              }
+            }
+          }
+        },
+        "artifacts": {
+          "type": "object",
+          "properties": {
+            "payload": {
+              "type": "object",
+              "properties": {
+                "evidence_id": {
+                  "type": "string",
+                  "pattern": "^SIM-001:"
+                },
+                "path": {
+                  "type": "string",
+                  "pattern": "^evidence/runs/SIM-001/S7-SIM-001-"
+                }
+              }
+            },
+            "result": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^results/SIM-001-"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-002"
+        },
+        "run_id": {
+          "type": "string",
+          "pattern": "^S7-SIM-002-"
+        },
+        "inputs": {
+          "type": "object",
+          "properties": {
+            "scenario": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^scenarios/SIM-002-"
+                }
+              }
+            },
+            "oracle": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^expected/SIM-002-"
+                }
+              }
+            }
+          }
+        },
+        "artifacts": {
+          "type": "object",
+          "properties": {
+            "payload": {
+              "type": "object",
+              "properties": {
+                "evidence_id": {
+                  "type": "string",
+                  "pattern": "^SIM-002:"
+                },
+                "path": {
+                  "type": "string",
+                  "pattern": "^evidence/runs/SIM-002/S7-SIM-002-"
+                }
+              }
+            },
+            "result": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^results/SIM-002-"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-003"
+        },
+        "run_id": {
+          "type": "string",
+          "pattern": "^S7-SIM-003-"
+        },
+        "inputs": {
+          "type": "object",
+          "properties": {
+            "scenario": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^scenarios/SIM-003-"
+                }
+              }
+            },
+            "oracle": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^expected/SIM-003-"
+                }
+              }
+            }
+          }
+        },
+        "artifacts": {
+          "type": "object",
+          "properties": {
+            "payload": {
+              "type": "object",
+              "properties": {
+                "evidence_id": {
+                  "type": "string",
+                  "pattern": "^SIM-003:"
+                },
+                "path": {
+                  "type": "string",
+                  "pattern": "^evidence/runs/SIM-003/S7-SIM-003-"
+                }
+              }
+            },
+            "result": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^results/SIM-003-"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-004"
+        },
+        "run_id": {
+          "type": "string",
+          "pattern": "^S7-SIM-004-"
+        },
+        "inputs": {
+          "type": "object",
+          "properties": {
+            "scenario": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^scenarios/SIM-004-"
+                }
+              }
+            },
+            "oracle": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^expected/SIM-004-"
+                }
+              }
+            }
+          }
+        },
+        "artifacts": {
+          "type": "object",
+          "properties": {
+            "payload": {
+              "type": "object",
+              "properties": {
+                "evidence_id": {
+                  "type": "string",
+                  "pattern": "^SIM-004:"
+                },
+                "path": {
+                  "type": "string",
+                  "pattern": "^evidence/runs/SIM-004/S7-SIM-004-"
+                }
+              }
+            },
+            "result": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^results/SIM-004-"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-005"
+        },
+        "run_id": {
+          "type": "string",
+          "pattern": "^S7-SIM-005-"
+        },
+        "inputs": {
+          "type": "object",
+          "properties": {
+            "scenario": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^scenarios/SIM-005-"
+                }
+              }
+            },
+            "oracle": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^expected/SIM-005-"
+                }
+              }
+            }
+          }
+        },
+        "artifacts": {
+          "type": "object",
+          "properties": {
+            "payload": {
+              "type": "object",
+              "properties": {
+                "evidence_id": {
+                  "type": "string",
+                  "pattern": "^SIM-005:"
+                },
+                "path": {
+                  "type": "string",
+                  "pattern": "^evidence/runs/SIM-005/S7-SIM-005-"
+                }
+              }
+            },
+            "result": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^results/SIM-005-"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "scenario_id": {
+          "const": "SIM-006"
+        },
+        "run_id": {
+          "type": "string",
+          "pattern": "^S7-SIM-006-"
+        },
+        "inputs": {
+          "type": "object",
+          "properties": {
+            "scenario": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^scenarios/SIM-006-"
+                }
+              }
+            },
+            "oracle": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^expected/SIM-006-"
+                }
+              }
+            }
+          }
+        },
+        "artifacts": {
+          "type": "object",
+          "properties": {
+            "payload": {
+              "type": "object",
+              "properties": {
+                "evidence_id": {
+                  "type": "string",
+                  "pattern": "^SIM-006:"
+                },
+                "path": {
+                  "type": "string",
+                  "pattern": "^evidence/runs/SIM-006/S7-SIM-006-"
+                }
+              }
+            },
+            "result": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^results/SIM-006-"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "scenario_id": {
+      "enum": [
+        "SIM-001",
+        "SIM-002",
+        "SIM-003",
+        "SIM-004",
+        "SIM-005",
+        "SIM-006"
+      ]
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^S7-SIM-00[1-6]-(P1|P2|IR)-R[0-9]{2}$"
+    },
+    "sha1": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "utc_date_time": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "safe_repository_path": {
+      "type": "string",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!//)(?!.*//)(?!.*\\\\)(?!.*(^|/)\\.(/|$))(?!.*(^|/)\\.\\.(/|$))(?!.*\\/$)[A-Za-z0-9._/-]+$"
+    },
+    "scenario_path": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/safe_repository_path"
+        },
+        {
+          "type": "string",
+          "pattern": "^scenarios/SIM-00[1-6]-[A-Za-z0-9._/-]+\\.md$"
+        }
+      ]
+    },
+    "fixture_path": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/safe_repository_path"
+        },
+        {
+          "type": "string",
+          "pattern": "^fixtures/[A-Za-z0-9._/-]+$"
+        }
+      ]
+    },
+    "oracle_path": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/safe_repository_path"
+        },
+        {
+          "type": "string",
+          "pattern": "^expected/SIM-00[1-6]-[A-Za-z0-9._/-]+\\.md$"
+        }
+      ]
+    },
+    "payload_path": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/safe_repository_path"
+        },
+        {
+          "type": "string",
+          "pattern": "^evidence/runs/SIM-00[1-6]/S7-SIM-00[1-6]-(P1|P2|IR)-R[0-9]{2}\\.payload\\.json$"
+        }
+      ]
+    },
+    "result_path": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/safe_repository_path"
+        },
+        {
+          "type": "string",
+          "pattern": "^results/SIM-00[1-6]-[A-Za-z0-9._/-]+\\.md$"
+        }
+      ]
+    },
+    "execution_surface": {
+      "type": "object",
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._:-]*$"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._:-]*$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "environment": {
+      "type": "object",
+      "required": [
+        "os",
+        "architecture"
+      ],
+      "properties": {
+        "os": {
+          "type": "object",
+          "required": [
+            "name",
+            "version"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._:-]*$"
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._:-]*$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "architecture": {
+          "enum": [
+            "x64",
+            "arm64"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "runtime_versions": {
+      "type": "object",
+      "required": [
+        "python",
+        "git",
+        "node",
+        "npm",
+        "npx",
+        "ajv_cli",
+        "sandbox_validator"
+      ],
+      "properties": {
+        "python": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "git": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "node": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "npm": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "npx": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "ajv_cli": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "sandbox_validator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        }
+      },
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "consumer_execution_input",
+        "hub_pin",
+        "schema_versions"
+      ],
+      "properties": {
+        "consumer_execution_input": {
+          "$ref": "#/$defs/sha1"
+        },
+        "hub_pin": {
+          "$ref": "#/$defs/sha1"
+        },
+        "schema_versions": {
+          "type": "object",
+          "required": [
+            "payload",
+            "routing_trace",
+            "run_record"
+          ],
+          "properties": {
+            "payload": {
+              "const": "1.0.0"
+            },
+            "routing_trace": {
+              "const": "1.0.0"
+            },
+            "run_record": {
+              "const": "1.0.0"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "hashed_file": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/safe_repository_path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "scenario_file": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/scenario_path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "fixture_file": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/fixture_path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "oracle_file": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/oracle_path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "inputs": {
+      "type": "object",
+      "required": [
+        "scenario",
+        "fixtures",
+        "oracle"
+      ],
+      "properties": {
+        "scenario": {
+          "$ref": "#/$defs/scenario_file"
+        },
+        "fixtures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fixture_file"
+          }
+        },
+        "oracle": {
+          "$ref": "#/$defs/oracle_file"
+        }
+      },
+      "additionalProperties": false
+    },
+    "payload_artifact": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256",
+        "evidence_id"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/payload_path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^SIM-00[1-6]:[a-z0-9][a-z0-9._-]*:v1$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "result_artifact": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/result_path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "artifacts": {
+      "type": "object",
+      "required": [
+        "payload",
+        "result"
+      ],
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/payload_artifact"
+        },
+        "result": {
+          "$ref": "#/$defs/result_artifact"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
