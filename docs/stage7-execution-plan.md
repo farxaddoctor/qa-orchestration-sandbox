@@ -32,6 +32,7 @@ Future execution input:
 - The Consumer execution-input revision is unset in this planning artifact.
 - The execution-input revision must be a full approved 40-character Consumer SHA created only after all approved infrastructure, oracle-governance, validator, and CI changes have merged.
 - The execution-input revision must pin the Hub to `e9478de80719087167e9f4bb1091497df49186e0`.
+- Scenario-specific freeze/readiness records may record a later reviewed execution-input revision for a named cohort. The first such prepared record is `docs/stage7-sim-002-r01-freeze.md`; it is readiness for Level 3 approval only and does not authorize controlled execution.
 - An unset, abbreviated, dirty, unmerged, or unapproved execution-input revision is a hard stop condition.
 
 The planning baseline revision is not automatically the execution-input revision. Stage 7 evidence may use only the later approved execution-input SHA.
@@ -364,10 +365,12 @@ Required artifact classes after future approval:
 Result path convention:
 
 - Controlled result artifact paths must match `^results/SIM-00[1-6]-[A-Za-z0-9._/-]+\.md$`.
-- Use `results/<SIM-ID>-stage7-<cohort-token>-r<NN>.md`.
-- Examples: `results/SIM-002-stage7-pilot-r01.md`, `results/SIM-002-stage7-pilot-r02.md`, `results/SIM-002-stage7-pilot-r03.md`, and `results/SIM-001-stage7-c01-r01.md`.
+- Use `results/<SIM-ID>-stage7-<member-token>-r<NN>.md`.
+- `r<NN>` is the shared cohort attempt identity for P1, P2, and IR. The member token is `p1`, `p2`, or `ir`.
+- The first controlled SIM-002 cohort uses `results/SIM-002-stage7-p1-r01.md`, `results/SIM-002-stage7-p2-r01.md`, and `results/SIM-002-stage7-ir-r01.md`.
+- A later independent or restarted cohort for the same scenario uses the next unused shared RNN for all three members, such as `results/SIM-002-stage7-p1-r02.md`, `results/SIM-002-stage7-p2-r02.md`, and `results/SIM-002-stage7-ir-r02.md`.
 - The `SIM-ID` in the result path must match `scenario_id`, `evidence_id`, routing trace, run record, and manifest entry.
-- The `cohort-token` and run number must deterministically correspond to the run ID.
+- The member token and run number must deterministically correspond to the run ID.
 - The suffix after `SIM-ID` must be non-empty.
 - Parent traversal is forbidden.
 - An existing result path must never be reused or overwritten.
