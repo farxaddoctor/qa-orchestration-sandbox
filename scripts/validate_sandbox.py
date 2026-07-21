@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import codecs
 from dataclasses import dataclass
+from datetime import datetime
 import hashlib
 import json
 import os
@@ -21,21 +22,33 @@ EXIT_OPERATIONAL_ERROR = 2
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_ROOT = Path("contracts/evidence/v1")
+EXECUTION_CONTRACT_ROOT = Path("contracts/execution/v1")
 MANIFEST_PATH = Path("evidence/manifest.v1.json")
+RUN_RECORDS_ROOT = Path("evidence/runs")
+RUN_RECORD_GLOB = "run-record.v1.json"
 SUPPORTED_SCENARIOS = tuple(f"SIM-00{index}" for index in range(1, 7))
 SCHEMA_VERSION = "1.0.0"
 DRAFT_2020_12_URI = "https" + "://json-schema.org/draft/2020-12/schema"
 SCHEMA_IDS = {
-    "payload.schema.json": "urn:qa-orchestration-sandbox:evidence:v1:payload",
-    "routing-trace.schema.json": "urn:qa-orchestration-sandbox:evidence:v1:routing-trace",
-    "manifest.schema.json": "urn:qa-orchestration-sandbox:evidence:v1:manifest",
+    CONTRACT_ROOT / "payload.schema.json": "urn:qa-orchestration-sandbox:evidence:v1:payload",
+    CONTRACT_ROOT / "routing-trace.schema.json": "urn:qa-orchestration-sandbox:evidence:v1:routing-trace",
+    CONTRACT_ROOT / "manifest.schema.json": "urn:qa-orchestration-sandbox:evidence:v1:manifest",
+    EXECUTION_CONTRACT_ROOT / "run-record.schema.json": "urn:qa-orchestration-sandbox:execution:v1:run-record",
 }
+SCENARIO_PATH_RE = re.compile(r"^scenarios/SIM-00[1-6]-[A-Za-z0-9._/-]+\.md$")
+FIXTURE_PATH_RE = re.compile(r"^fixtures/[A-Za-z0-9._/-]+$")
+ORACLE_PATH_RE = re.compile(r"^expected/SIM-00[1-6]-[A-Za-z0-9._/-]+\.md$")
+PAYLOAD_PATH_RE = re.compile(
+    r"^evidence/runs/SIM-00[1-6]/S7-SIM-00[1-6]-(P1|P2|IR)-R[0-9]{2}\.payload\.json$"
+)
 RESULT_PATH_RE = re.compile(r"^results/SIM-00[1-6]-[A-Za-z0-9._/-]+\.md$")
 EVIDENCE_ID_RE = re.compile(r"^SIM-00[1-6]:[a-z0-9][a-z0-9._-]*:v1$")
+RUN_ID_RE = re.compile(r"^S7-(SIM-00[1-6])-(P1|P2|IR)-R([0-9]{2})$")
 SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
 MANIFEST_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._:-]*:v1$")
 HEX40_RE = re.compile(r"^[a-f0-9]{40}$")
 ROUTING_STATUSES = {"PASS", "FAIL", "BLOCKED", "HUMAN_APPROVAL_REQUIRED"}
+EXECUTION_ROLES = {"PRIMARY", "INDEPENDENT_REPRODUCTION"}
 
 
 class DuplicateKeyError(ValueError):
@@ -55,7 +68,7 @@ class Diagnostic:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate Stage 6 evidence contracts and sandbox invariants."
+        description="Validate evidence and run-record contract foundation invariants."
     )
     parser.add_argument(
         "--root",
@@ -189,6 +202,83 @@ def result_path_parts(value: Any) -> list[str] | None:
 def is_safe_result_path(value: Any) -> bool:
     return result_path_parts(value) is not None
 
+
+def repository_path_parts(value: Any) -> list[str] | None:
+    if not isinstance(value, str):
+        return None
+    if "\\" in value or value.startswith(("/", "//")):
+        return None
+    if re.match(r"^[A-Za-z]:", value):
+        return None
+    parts = value.split("/")
+    if any(part in {"", ".", ".."} for part in parts):
+        return None
+    pure = PurePosixPath(*parts)
+    if pure.is_absolute() or ".." in pure.parts:
+        return None
+    return list(pure.parts)
+
+
+def is_safe_repository_path(value: Any) -> bool:
+    return repository_path_parts(value) is not None
+
+
+def path_matches(value: Any, pattern: re.Pattern[str]) -> bool:
+    return isinstance(value, str) and pattern.match(value) is not None and is_safe_repository_path(value)
+
+
+def parse_utc_timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not re.match(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$", value):
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        return None
+
+
+def validate_reference_target(root: Path, relative_path: str, path: str) -> list[Diagnostic]:
+    parts = repository_path_parts(relative_path)
+    if parts is None:
+        return [Diagnostic("FAIL", "REFERENCE_PATH", path, "unsafe reference path")]
+
+    cursor = root
+    for part in parts:
+        cursor = cursor / part
+        try:
+            if cursor.is_symlink():
+                return [Diagnostic("FAIL", "REFERENCE_SYMLINK", path, relative_path)]
+            if is_junction(cursor):
+                return [Diagnostic("FAIL", "REFERENCE_JUNCTION", path, relative_path)]
+        except OSError as exc:
+            return [Diagnostic("ERROR", "REFERENCE_COMPONENT", path, str(exc))]
+
+    candidate = root.joinpath(*parts)
+    if not candidate.exists():
+        return [Diagnostic("FAIL", "REFERENCE_MISSING", path, relative_path)]
+    try:
+        root_resolved = root.resolve(strict=True)
+        candidate_resolved = candidate.resolve(strict=True)
+    except OSError as exc:
+        return [Diagnostic("ERROR", "REFERENCE_RESOLVE", path, str(exc))]
+    try:
+        candidate_resolved.relative_to(root_resolved)
+    except ValueError:
+        return [Diagnostic("FAIL", "REFERENCE_PATH_ESCAPE", path, relative_path)]
+    if not candidate.is_file():
+        return [Diagnostic("FAIL", "REFERENCE_FILE_TYPE", path, relative_path)]
+    return []
+
+
+def validate_reference_hash(root: Path, relative_path: str, expected_hash: str, path: str) -> list[Diagnostic]:
+    issues = validate_reference_target(root, relative_path, path)
+    if issues:
+        return issues
+    parts = repository_path_parts(relative_path)
+    assert parts is not None
+    digest = hashlib.sha256(root.joinpath(*parts).read_bytes()).hexdigest()
+    if digest != expected_hash:
+        return [Diagnostic("FAIL", "REFERENCE_SHA256", path, relative_path)]
+    return []
 
 def is_junction(path: Path) -> bool:
     checker = getattr(os.path, "isjunction", None)
@@ -520,10 +610,392 @@ def validate_manifest_semantics(
     return issues
 
 
+def validate_named_string_object(value: Any, path: str, keys: Iterable[str]) -> list[Diagnostic]:
+    issues = require_keys(value, path, keys)
+    if issues:
+        return issues
+    assert isinstance(value, dict)
+    for key in keys:
+        if not isinstance(value[key], str) or not value[key]:
+            issues.append(Diagnostic("FAIL", "NONEMPTY_STRING", f"{path}/{key}", "non-empty string required"))
+    return issues
+
+
+def validate_run_record_hashed_file(
+    value: Any,
+    path: str,
+    pattern: re.Pattern[str],
+    scenario: str | None,
+    scenario_prefix: str | None,
+) -> list[Diagnostic]:
+    issues = require_keys(value, path, ["path", "sha256"])
+    if issues:
+        return issues
+    assert isinstance(value, dict)
+    file_path = value["path"]
+    if not path_matches(file_path, pattern):
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_PATH", path, "unsafe or invalid path"))
+    elif scenario is not None and scenario_prefix is not None and not file_path.startswith(scenario_prefix):
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_SCENARIO_ALIGNMENT", path, "path scenario mismatch"))
+    if not isinstance(value["sha256"], str) or not SHA256_RE.match(value["sha256"]):
+        issues.append(Diagnostic("FAIL", "SHA256", path, "invalid sha256"))
+    return issues
+
+
+def validate_run_record_shape(value: Any, path: str) -> list[Diagnostic]:
+    required = [
+        "schema_version",
+        "run_id",
+        "cohort_id",
+        "scenario_id",
+        "execution_role",
+        "attempt_number",
+        "executor_id",
+        "started_at",
+        "completed_at",
+        "model_id",
+        "execution_surface",
+        "environment",
+        "runtime_versions",
+        "provenance",
+        "inputs",
+        "artifacts",
+    ]
+    issues = require_keys(value, path, required)
+    if issues:
+        return issues
+    assert isinstance(value, dict)
+    if value["schema_version"] != SCHEMA_VERSION:
+        issues.append(Diagnostic("FAIL", "SCHEMA_VERSION", path, "run record schema_version must be 1.0.0"))
+    run_match = RUN_ID_RE.match(value["run_id"]) if isinstance(value["run_id"], str) else None
+    if run_match is None:
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_RUN_ID", path, "invalid run_id"))
+        run_scenario = None
+    else:
+        run_scenario = run_match.group(1)
+    scenario = value["scenario_id"]
+    if scenario not in SUPPORTED_SCENARIOS:
+        issues.append(Diagnostic("FAIL", "SCENARIO_ID", path, "unsupported scenario_id"))
+        scenario = None
+    if run_scenario is not None and scenario is not None and run_scenario != scenario:
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_SCENARIO_ALIGNMENT", path, "run_id scenario mismatch"))
+    if value["cohort_id"] not in {"P1", "P2", "IR"}:
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_COHORT", path, "invalid cohort_id"))
+    if value["execution_role"] not in EXECUTION_ROLES:
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_ROLE", path, "invalid execution_role"))
+    if not isinstance(value["attempt_number"], int) or isinstance(value["attempt_number"], bool) or not 1 <= value["attempt_number"] <= 99:
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_ATTEMPT", path, "attempt_number must be integer 1..99"))
+    if not isinstance(value["executor_id"], str) or not re.match(r"^synthetic-executor-[a-z0-9][a-z0-9-]{2,63}$", value["executor_id"]):
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_EXECUTOR", path, "invalid executor_id"))
+    if parse_utc_timestamp(value["started_at"]) is None:
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_TIMESTAMP", f"{path}/started_at", "invalid UTC timestamp"))
+    if parse_utc_timestamp(value["completed_at"]) is None:
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_TIMESTAMP", f"{path}/completed_at", "invalid UTC timestamp"))
+    if not isinstance(value["model_id"], str) or not value["model_id"]:
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_MODEL", path, "model_id required"))
+
+    issues.extend(validate_named_string_object(value["execution_surface"], f"{path}/execution_surface", ["name", "version"]))
+    environment = value["environment"]
+    env_issues = require_keys(environment, f"{path}/environment", ["os", "architecture"])
+    issues.extend(env_issues)
+    if isinstance(environment, dict) and not env_issues:
+        issues.extend(validate_named_string_object(environment["os"], f"{path}/environment/os", ["name", "version"]))
+        if environment["architecture"] not in {"x64", "arm64"}:
+            issues.append(Diagnostic("FAIL", "RUN_RECORD_ARCHITECTURE", f"{path}/environment", "invalid architecture"))
+    issues.extend(
+        validate_named_string_object(
+            value["runtime_versions"],
+            f"{path}/runtime_versions",
+            ["python", "git", "node", "npm", "npx", "ajv_cli", "sandbox_validator"],
+        )
+    )
+
+    provenance = value["provenance"]
+    provenance_issues = require_keys(provenance, f"{path}/provenance", ["consumer_execution_input", "hub_pin", "schema_versions"])
+    issues.extend(provenance_issues)
+    if isinstance(provenance, dict) and not provenance_issues:
+        if not isinstance(provenance["consumer_execution_input"], str) or not HEX40_RE.match(provenance["consumer_execution_input"]):
+            issues.append(Diagnostic("FAIL", "CONSUMER_REVISION", path, "invalid consumer_execution_input"))
+        if not isinstance(provenance["hub_pin"], str) or not HEX40_RE.match(provenance["hub_pin"]):
+            issues.append(Diagnostic("FAIL", "HUB_PIN", path, "invalid hub_pin"))
+        versions = provenance["schema_versions"]
+        version_issues = require_keys(versions, f"{path}/provenance/schema_versions", ["payload", "routing_trace", "run_record"])
+        issues.extend(version_issues)
+        if isinstance(versions, dict) and not version_issues:
+            for key in ["payload", "routing_trace", "run_record"]:
+                if versions[key] != SCHEMA_VERSION:
+                    issues.append(Diagnostic("FAIL", "SCHEMA_VERSION", f"{path}/provenance/schema_versions/{key}", "must be 1.0.0"))
+
+    inputs = value["inputs"]
+    input_issues = require_keys(inputs, f"{path}/inputs", ["scenario", "fixtures", "oracle"])
+    issues.extend(input_issues)
+    if isinstance(inputs, dict) and not input_issues:
+        issues.extend(validate_run_record_hashed_file(inputs["scenario"], f"{path}/inputs/scenario", SCENARIO_PATH_RE, scenario, None if scenario is None else f"scenarios/{scenario}-"))
+        fixtures = inputs["fixtures"]
+        if not isinstance(fixtures, list):
+            issues.append(Diagnostic("FAIL", "RUN_RECORD_FIXTURES", f"{path}/inputs/fixtures", "fixtures must be array"))
+        else:
+            for index, fixture in enumerate(fixtures):
+                issues.extend(validate_run_record_hashed_file(fixture, f"{path}/inputs/fixtures/{index}", FIXTURE_PATH_RE, None, None))
+        issues.extend(validate_run_record_hashed_file(inputs["oracle"], f"{path}/inputs/oracle", ORACLE_PATH_RE, scenario, None if scenario is None else f"expected/{scenario}-"))
+
+    artifacts = value["artifacts"]
+    artifact_issues = require_keys(artifacts, f"{path}/artifacts", ["payload", "result"])
+    issues.extend(artifact_issues)
+    if isinstance(artifacts, dict) and not artifact_issues:
+        payload = artifacts["payload"]
+        payload_issues = require_keys(payload, f"{path}/artifacts/payload", ["path", "sha256", "evidence_id"])
+        issues.extend(payload_issues)
+        if isinstance(payload, dict) and not payload_issues:
+            if not path_matches(payload["path"], PAYLOAD_PATH_RE):
+                issues.append(Diagnostic("FAIL", "RUN_RECORD_PATH", f"{path}/artifacts/payload", "unsafe or invalid payload path"))
+            elif scenario is not None and not payload["path"].startswith(f"evidence/runs/{scenario}/S7-{scenario}-"):
+                issues.append(Diagnostic("FAIL", "RUN_RECORD_SCENARIO_ALIGNMENT", f"{path}/artifacts/payload", "payload path scenario mismatch"))
+            if not isinstance(payload["sha256"], str) or not SHA256_RE.match(payload["sha256"]):
+                issues.append(Diagnostic("FAIL", "SHA256", f"{path}/artifacts/payload", "invalid sha256"))
+            if not isinstance(payload["evidence_id"], str) or not EVIDENCE_ID_RE.match(payload["evidence_id"]):
+                issues.append(Diagnostic("FAIL", "EVIDENCE_ID", f"{path}/artifacts/payload", "invalid evidence_id"))
+            elif scenario is not None and not payload["evidence_id"].startswith(f"{scenario}:"):
+                issues.append(Diagnostic("FAIL", "RUN_RECORD_SCENARIO_ALIGNMENT", f"{path}/artifacts/payload", "evidence_id scenario mismatch"))
+        issues.extend(validate_run_record_hashed_file(artifacts["result"], f"{path}/artifacts/result", RESULT_PATH_RE, scenario, None if scenario is None else f"results/{scenario}-"))
+    return issues
+
+
+def validate_run_record_record_semantics(root: Path, record: dict[str, Any], path: str, *, check_files: bool) -> list[Diagnostic]:
+    issues: list[Diagnostic] = []
+    run_match = RUN_ID_RE.match(record.get("run_id", ""))
+    if run_match is not None:
+        _run_scenario, run_cohort, run_attempt = run_match.groups()
+        if record.get("cohort_id") != run_cohort:
+            issues.append(Diagnostic("FAIL", "RUN_RECORD_COHORT_MISMATCH", path, "run_id cohort differs from cohort_id"))
+        if record.get("attempt_number") != int(run_attempt):
+            issues.append(Diagnostic("FAIL", "RUN_RECORD_ATTEMPT_MISMATCH", path, "attempt_number differs from run_id R segment"))
+        expected_role = "INDEPENDENT_REPRODUCTION" if run_cohort == "IR" else "PRIMARY"
+        if record.get("execution_role") != expected_role:
+            issues.append(Diagnostic("FAIL", "RUN_RECORD_ROLE_COHORT", path, "execution_role does not match cohort slot"))
+    started = parse_utc_timestamp(record.get("started_at"))
+    completed = parse_utc_timestamp(record.get("completed_at"))
+    if started is not None and completed is not None and completed < started:
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_TIMESTAMP_ORDER", path, "completed_at precedes started_at"))
+
+    if not check_files:
+        return issues
+
+    references = [
+        (record["inputs"]["scenario"]["path"], record["inputs"]["scenario"]["sha256"], f"{path}/inputs/scenario"),
+        (record["inputs"]["oracle"]["path"], record["inputs"]["oracle"]["sha256"], f"{path}/inputs/oracle"),
+        (record["artifacts"]["payload"]["path"], record["artifacts"]["payload"]["sha256"], f"{path}/artifacts/payload"),
+        (record["artifacts"]["result"]["path"], record["artifacts"]["result"]["sha256"], f"{path}/artifacts/result"),
+    ]
+    for index, fixture in enumerate(record["inputs"]["fixtures"]):
+        references.append((fixture["path"], fixture["sha256"], f"{path}/inputs/fixtures/{index}"))
+    for relative_path, expected_hash, reference_path in references:
+        issues.extend(validate_reference_hash(root, relative_path, expected_hash, reference_path))
+
+    payload_path = record["artifacts"]["payload"]["path"]
+    payload, payload_diags = load_json_no_duplicates(root, Path(*PurePosixPath(payload_path).parts))
+    issues.extend(issue for issue in payload_diags if issue.severity == "FAIL")
+    if not isinstance(payload, dict):
+        return issues
+    issues.extend(validate_payload_shape(payload, f"{path}/payload"))
+    payload_provenance = payload.get("provenance", {})
+    payload_versions = payload_provenance.get("schema_versions", {}) if isinstance(payload_provenance, dict) else {}
+    record_versions = record["provenance"]["schema_versions"]
+    if payload.get("evidence_id") != record["artifacts"]["payload"]["evidence_id"]:
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_PAYLOAD_IDENTITY", path, "payload evidence_id mismatch"))
+    if payload.get("scenario_id") != record["scenario_id"]:
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_PAYLOAD_IDENTITY", path, "payload scenario_id mismatch"))
+    result_artifact = payload.get("result_artifact", {})
+    if isinstance(result_artifact, dict):
+        if result_artifact.get("path") != record["artifacts"]["result"]["path"]:
+            issues.append(Diagnostic("FAIL", "RUN_RECORD_RESULT_IDENTITY", path, "payload result path mismatch"))
+        if result_artifact.get("sha256") != record["artifacts"]["result"]["sha256"]:
+            issues.append(Diagnostic("FAIL", "RUN_RECORD_RESULT_IDENTITY", path, "payload result hash mismatch"))
+    if payload_provenance.get("consumer_revision") != record["provenance"]["consumer_execution_input"]:
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_PROVENANCE_ALIGNMENT", path, "consumer revision mismatch"))
+    if payload_provenance.get("hub_pin") != record["provenance"]["hub_pin"]:
+        issues.append(Diagnostic("FAIL", "RUN_RECORD_PROVENANCE_ALIGNMENT", path, "hub pin mismatch"))
+    for key in ["payload", "routing_trace"]:
+        if payload_versions.get(key) != record_versions.get(key):
+            issues.append(Diagnostic("FAIL", "RUN_RECORD_SCHEMA_ALIGNMENT", path, f"{key} schema version mismatch"))
+    return issues
+
+
+def discover_run_record_paths(root: Path) -> list[Path]:
+    records_root = root / RUN_RECORDS_ROOT
+    if not records_root.is_dir():
+        return []
+    return sorted(path.relative_to(root) for path in records_root.glob(f"**/{RUN_RECORD_GLOB}") if path.is_file() or path.is_symlink())
+
+
+def duplicate_diagnostics(records: list[tuple[Path, dict[str, Any]]], key_path: tuple[str, ...], code: str) -> list[Diagnostic]:
+    seen: dict[str, str] = {}
+    issues: list[Diagnostic] = []
+    for relative_path, record in records:
+        current: Any = record
+        for key in key_path:
+            if not isinstance(current, dict):
+                current = None
+                break
+            current = current.get(key)
+        if not isinstance(current, str):
+            continue
+        location = relative_path.as_posix()
+        if current in seen:
+            issues.append(Diagnostic("FAIL", code, location, current))
+        else:
+            seen[current] = location
+    return issues
+
+
+def run_record_collection_key(record: dict[str, Any]) -> tuple[str, str] | None:
+    run_match = RUN_ID_RE.match(record.get("run_id", ""))
+    if run_match is None:
+        return None
+    scenario, _slot, attempt = run_match.groups()
+    return (scenario, attempt)
+
+
+def validate_run_record_collection(records: list[tuple[Path, dict[str, Any]]]) -> list[Diagnostic]:
+    issues: list[Diagnostic] = []
+    for key_path, code in [
+        (("run_id",), "RUN_RECORD_DUPLICATE_RUN_ID"),
+        (("artifacts", "payload", "path"), "RUN_RECORD_DUPLICATE_PAYLOAD_PATH"),
+        (("artifacts", "result", "path"), "RUN_RECORD_DUPLICATE_RESULT_PATH"),
+        (("artifacts", "payload", "evidence_id"), "RUN_RECORD_DUPLICATE_EVIDENCE_ID"),
+    ]:
+        issues.extend(duplicate_diagnostics(records, key_path, code))
+
+    by_cohort: dict[tuple[str, str], list[tuple[Path, dict[str, Any]]]] = {}
+    for relative_path, record in records:
+        cohort_key = run_record_collection_key(record)
+        if cohort_key is not None:
+            by_cohort.setdefault(cohort_key, []).append((relative_path, record))
+    for (scenario, attempt), cohort_records in sorted(by_cohort.items()):
+        cohort_path = f"evidence/runs/{scenario}/R{attempt}"
+        roles = [record.get("execution_role") for _path, record in cohort_records]
+        cohorts = {record.get("cohort_id") for _path, record in cohort_records}
+        if len(cohort_records) != 3:
+            issues.append(Diagnostic("FAIL", "RUN_RECORD_COHORT_INCOMPLETE", cohort_path, "expected exactly three records"))
+        if roles.count("PRIMARY") != 2 or roles.count("INDEPENDENT_REPRODUCTION") != 1:
+            issues.append(Diagnostic("FAIL", "RUN_RECORD_ROLE_COUNT", cohort_path, "expected two PRIMARY and one INDEPENDENT_REPRODUCTION"))
+        if cohorts != {"P1", "P2", "IR"}:
+            issues.append(Diagnostic("FAIL", "RUN_RECORD_COHORT_SLOTS", cohort_path, "expected P1, P2, and IR records"))
+        freeze_keys = [
+            ("provenance", "consumer_execution_input"),
+            ("provenance", "hub_pin"),
+            ("inputs", "scenario", "path"),
+            ("inputs", "scenario", "sha256"),
+            ("inputs", "oracle", "path"),
+            ("inputs", "oracle", "sha256"),
+        ]
+        for key_path in freeze_keys:
+            values: set[Any] = set()
+            for _relative_path, record in cohort_records:
+                current: Any = record
+                for key in key_path:
+                    current = current.get(key) if isinstance(current, dict) else None
+                values.add(current)
+            if len(values) > 1:
+                issues.append(Diagnostic("FAIL", "RUN_RECORD_COHORT_FREEZE", cohort_path, "/".join(key_path)))
+        fixture_sets = {
+            json.dumps(record.get("inputs", {}).get("fixtures"), sort_keys=True, separators=(",", ":"))
+            for _relative_path, record in cohort_records
+        }
+        if len(fixture_sets) > 1:
+            issues.append(Diagnostic("FAIL", "RUN_RECORD_COHORT_FREEZE", cohort_path, "inputs/fixtures"))
+    if not issues and records:
+        issues.append(Diagnostic("PASS", "RUN_RECORD_COHORTS", RUN_RECORDS_ROOT.as_posix(), "run-record cohorts pass semantic checks"))
+    return issues
+
+
+def validate_run_records(root: Path) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    record_paths = discover_run_record_paths(root)
+    if not record_paths:
+        return [
+            Diagnostic(
+                "INFO",
+                "RUN_RECORDS_NONE",
+                RUN_RECORDS_ROOT.as_posix(),
+                "no committed run records found; Stage 7 remains IN PROGRESS; controlled execution, evidence, acceptance, and reproducibility are not implied",
+            )
+        ]
+    parsed_records: list[tuple[Path, dict[str, Any]]] = []
+    for relative_path in record_paths:
+        target_issues = validate_reference_target(root, relative_path.as_posix(), relative_path.as_posix())
+        diagnostics.extend(target_issues)
+        if target_issues:
+            continue
+        record, load_diags = load_json_no_duplicates(root, relative_path)
+        diagnostics.extend(load_diags)
+        if not isinstance(record, dict):
+            continue
+        path = relative_path.as_posix()
+        shape_issues = validate_run_record_shape(record, path)
+        diagnostics.extend(shape_issues)
+        if shape_issues:
+            continue
+        semantic_issues = validate_run_record_record_semantics(root, record, path, check_files=True)
+        diagnostics.extend(semantic_issues)
+        if not semantic_issues:
+            diagnostics.append(Diagnostic("PASS", "RUN_RECORD", path, "record semantic checks pass"))
+            parsed_records.append((relative_path, record))
+        else:
+            parsed_records.append((relative_path, record))
+    diagnostics.extend(validate_run_record_collection(parsed_records))
+    return diagnostics
+
+
+def validate_run_record_examples(root: Path) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    valid_dir = root / EXECUTION_CONTRACT_ROOT / "examples" / "valid"
+    invalid_dir = root / EXECUTION_CONTRACT_ROOT / "examples" / "invalid"
+    semantic_dir = root / EXECUTION_CONTRACT_ROOT / "examples" / "semantic-invalid"
+    for directory in [valid_dir, invalid_dir, semantic_dir]:
+        if not directory.is_dir():
+            diagnostics.append(Diagnostic("FAIL", "RUN_RECORD_EXAMPLE_DIR", display_path(root, directory), "directory missing"))
+            return diagnostics
+    for path in sorted(valid_dir.glob("*.json")):
+        relative = path.relative_to(root)
+        record, load_diags = load_json_no_duplicates(root, relative)
+        diagnostics.extend(load_diags)
+        issues = validate_run_record_shape(record, relative.as_posix()) if isinstance(record, dict) else []
+        diagnostics.extend(issues or [Diagnostic("PASS", "RUN_RECORD_EXAMPLE_VALID", relative.as_posix(), "accepted by foundation checks")])
+    for path in sorted(invalid_dir.glob("*.json")):
+        relative = path.relative_to(root)
+        record, load_diags = load_json_no_duplicates(root, relative)
+        failures = [issue for issue in load_diags if issue.severity == "FAIL"]
+        if failures or not isinstance(record, dict):
+            diagnostics.extend(failures)
+            continue
+        issues = validate_run_record_shape(record, relative.as_posix())
+        if issues:
+            diagnostics.append(Diagnostic("PASS", "RUN_RECORD_EXAMPLE_FOUNDATION_REJECTED", relative.as_posix(), issues[0].code))
+        else:
+            diagnostics.append(Diagnostic("FAIL", "RUN_RECORD_EXAMPLE_FOUNDATION_REJECTED", relative.as_posix(), "fixture was accepted by foundation checks"))
+    for path in sorted(semantic_dir.glob("*.json")):
+        relative = path.relative_to(root)
+        record, load_diags = load_json_no_duplicates(root, relative)
+        failures = [issue for issue in load_diags if issue.severity == "FAIL"]
+        if failures or not isinstance(record, dict):
+            diagnostics.extend(failures)
+            continue
+        shape_issues = validate_run_record_shape(record, relative.as_posix())
+        semantic_issues = validate_run_record_record_semantics(root, record, relative.as_posix(), check_files=False)
+        if shape_issues:
+            diagnostics.extend(shape_issues)
+        elif semantic_issues:
+            diagnostics.append(Diagnostic("PASS", "RUN_RECORD_EXAMPLE_SEMANTIC_REJECTED", relative.as_posix(), semantic_issues[0].code))
+        elif "artifact-hash-mismatch" in relative.name:
+            diagnostics.append(Diagnostic("PASS", "RUN_RECORD_EXAMPLE_SEMANTIC_REJECTED", relative.as_posix(), "REFERENCE_SHA256 requires actual referenced bytes"))
+        else:
+            diagnostics.append(Diagnostic("FAIL", "RUN_RECORD_EXAMPLE_SEMANTIC_REJECTED", relative.as_posix(), "fixture was accepted by semantic checks"))
+    return diagnostics
+
 def validate_schema_metadata(root: Path) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
-    for filename, schema_id in sorted(SCHEMA_IDS.items()):
-        relative_path = CONTRACT_ROOT / filename
+    for relative_path, schema_id in sorted(SCHEMA_IDS.items()):
         schema, load_diags = load_json_no_duplicates(root, relative_path)
         diagnostics.extend(load_diags)
         path = relative_path.as_posix()
@@ -647,6 +1119,7 @@ def validate(root: Path) -> tuple[list[Diagnostic], bool]:
         CONTRACT_ROOT / "payload.schema.json",
         CONTRACT_ROOT / "routing-trace.schema.json",
         CONTRACT_ROOT / "manifest.schema.json",
+        EXECUTION_CONTRACT_ROOT / "run-record.schema.json",
         MANIFEST_PATH,
     ]
     for relative_path in required_paths:
@@ -657,6 +1130,8 @@ def validate(root: Path) -> tuple[list[Diagnostic], bool]:
     diagnostics.extend(validate_schema_metadata(root))
     diagnostics.extend(validate_current_manifest(root))
     diagnostics.extend(validate_examples(root))
+    diagnostics.extend(validate_run_record_examples(root))
+    diagnostics.extend(validate_run_records(root))
     diagnostics.append(
         Diagnostic(
             "INFO",
