@@ -80,6 +80,16 @@ jobs:
         run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d contracts/evidence/v1/examples/semantic-invalid/manifest-duplicate-evidence-id.json --valid
       - name: Ajv semantic invalid duplicate result path
         run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/evidence/v1/manifest.schema.json -d contracts/evidence/v1/examples/semantic-invalid/manifest-duplicate-result-path.json --valid
+      - name: Ajv run record valid example
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/execution/v1/run-record.schema.json -d contracts/execution/v1/examples/valid/run-record.json --valid
+      - name: Ajv run record missing model id
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/execution/v1/run-record.schema.json -d contracts/execution/v1/examples/invalid/run-record-missing-model-id.json --invalid
+      - name: Ajv run record invalid role
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/execution/v1/run-record.schema.json -d contracts/execution/v1/examples/invalid/run-record-invalid-role.json --invalid
+      - name: Ajv run record semantic cohort mismatch
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/execution/v1/run-record.schema.json -d contracts/execution/v1/examples/semantic-invalid/run-record-cohort-mismatch.json --valid
+      - name: Ajv run record semantic artifact hash mismatch
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/execution/v1/run-record.schema.json -d contracts/execution/v1/examples/semantic-invalid/run-record-artifact-hash-mismatch.json --valid
       - name: Run hub static validator
         working-directory: vendor/qa-skills-hub
         run: python scripts/validate_repository.py
