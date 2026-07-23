@@ -151,7 +151,7 @@ If the independent reproduction environment cannot be separated from the primary
 Every separate Stage 7 run record must include:
 
 - Exact model identifier.
-- Execution surface and version.
+- Execution surface and exact version when exposed; otherwise a structured unavailable state that cannot support a reproducibility claim.
 - Operating system and build.
 - Runtime and tool versions, including Python, Git, Node, npm, `npx`, `ajv-cli@5.0.0`, and any validator version.
 - Fresh-context confirmation.
@@ -159,7 +159,8 @@ Every separate Stage 7 run record must include:
 - Cohort identifier: `P1`, `P2`, or `IR`.
 - Run identifier.
 - Scenario ID.
-- Consumer execution-input SHA.
+- Consumer execution-input SHA, meaning the approved frozen execution-affecting Consumer revision.
+- Consumer execution repository SHA, meaning the actual Consumer `HEAD` checked out when execution occurred.
 - Hub pin.
 - Schema versions.
 - Start and completion timestamps in UTC.
@@ -177,9 +178,9 @@ Closed payload v1 boundary:
 - Its `provenance` object contains only `consumer_revision`, `hub_pin`, `schema_versions.payload`, and `schema_versions.routing_trace`.
 - Because `additionalProperties` is `false`, the v1 payload must not contain `run_id`, `cohort_id`, model, execution surface, operating system, timestamps, executor identity, fixture hashes, oracle hashes, or other Stage 7 execution metadata.
 - All extended Stage 7 execution metadata belongs exclusively in a separate Stage 7 run record.
-- The run-record format and schema are future, separately gated Stage 7 infrastructure. Until that format and its validation are approved and implemented, controlled execution is blocked.
+- Stage 7 run-record v2 records the execution-input revision and actual execution repository revision separately. They may differ only when the difference is explicitly reviewed and does not hide execution-affecting changes.
 
-If the exact model identifier, execution surface version, execution-input SHA, or required hash provenance cannot be recorded, stop and do not claim reproducibility.
+If the exact model identifier, execution-input SHA, actual execution repository SHA, or required hash provenance cannot be recorded, stop. If the exact execution-surface version cannot be recorded, preserve the run only as historical/non-reproducible evidence and do not claim reproducibility or Stage 7 acceptance for that run.
 
 ## Input Freeze
 
@@ -190,6 +191,7 @@ Before controlled execution starts, freeze all of these:
 - Oracle files under `expected/`.
 - Evaluation rules, including C1-C10.
 - Consumer execution-input revision.
+- Actual execution repository revision, captured at run time.
 - Hub pin.
 - Schema versions.
 - Validator version and CI workflow revision.
@@ -357,7 +359,7 @@ Required artifact classes after future approval:
 
 - Scenario result Markdown under `results/`.
 - Machine-readable payload for each controlled run.
-- Run record containing provenance, hashes, C1-C10 scores, and validator result.
+- Run record v2 containing provenance, hashes, C1-C10 scores, validator result, run-level acceptance outcome, and reproducibility claim status.
 - Routing trace conforming to `contracts/evidence/v1/routing-trace.schema.json`.
 - Manifest history update only after controlled results are selected.
 - Acceptance report only after validator and reproducibility gates pass.
@@ -389,10 +391,10 @@ Separate Stage 7 run-record responsibilities:
 - The run record references the v1 payload path and SHA-256.
 - The run record references `evidence_id`.
 - The run record references the result path and SHA-256.
-- The run record carries model, execution surface, environment, timestamps, executor role, scenario hash, consumed fixture hashes, and oracle hashes.
+- The run record carries model, execution surface, environment, timestamps, executor role, scenario hash, consumed fixture hashes, oracle hashes, C1-C10 evaluation, validator result, and run-level acceptance outcome.
 - Cross-file consistency between run record, payload, result, routing trace, and manifest must later be enforced by the sandbox validator.
-- The run-record format and schema are future, separately gated Stage 7 infrastructure. This plan does not invent or implement that schema.
-- Until the run-record format and validation are approved and implemented, controlled execution is blocked.
+- Run-record v1 remains historical. Future acceptance-eligible cohorts must use run-record v2 unless a later approved version supersedes it.
+- Cohorts must not mix run-record contract versions within the same `(scenario_id, RNN)` boundary.
 
 `canonical` in the manifest remains selection only until the Stage 7 acceptance process explicitly concludes acceptance.
 
@@ -479,3 +481,7 @@ Stop Stage 7 work immediately if any of these occur:
 - No acceptance, release-readiness, or reproducibility claim was made.
 - Stage 6 remains `COMPLETE`.
 - Stage 7 remains `NOT STARTED`.
+
+## SIM-002 R01 Pilot Disposition
+
+`SIM-002 / R01` remains preserved historical controlled-execution evidence. It is not eligible for Stage 7 acceptance because its v1 evidence could not record both Consumer revision concepts, did not persist approved C1-C10 and validator-result evidence, and did not expose an exact execution-surface version required for reproducibility. R01 artifacts must not be retroactively repaired, overwritten, converted to v2, or reused as members of R02. The next controlled SIM-002 attempt must use `R02` after v2 infrastructure approval, a new freeze, and a separate Level 3 controlled-execution approval.

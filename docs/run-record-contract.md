@@ -2,7 +2,7 @@
 
 ## Purpose and ownership
 
-The Stage 7 run-record contract defines a separate machine-readable record for controlled execution provenance. It records who or what synthetic executor performed a run, when the run occurred, the execution environment, frozen input references, and output artifact references.
+The Stage 7 run-record contract defines a separate machine-readable record for controlled execution provenance. It records who or what synthetic executor performed a run, when the run occurred, the execution environment, frozen input references, output artifact references, and, beginning with v2, post-run evaluation and validator-result evidence.
 
 Ownership belongs to the Stage 7 contract owner. It is not owned by the payload v1 contract, the manifest curator, or the evidence executor. Changes to this contract require a separately approved scope and must not be mixed with scenario execution, evidence generation, oracle changes, manifest updates, validator implementation, or CI changes.
 
@@ -20,9 +20,26 @@ The run record references payload artifacts by:
 
 The run record is a companion artifact. It does not redefine payload v1 and does not expand payload v1.
 
+## Version 2 correction
+
+Run-record v2 lives under `contracts/execution/v2/` and uses `schema_version: 2.0.0`. It is the minimum correction for future acceptance-eligible Stage 7 cohorts after the historical SIM-002/R01 pilot exposed v1 evidence-design gaps. Run-record v1 remains immutable and valid only under its original historical semantics.
+
+V2 records two Consumer revisions explicitly:
+
+| Field | Meaning |
+| --- | --- |
+| `provenance.execution_input_revision` | The approved frozen Consumer revision whose execution-affecting inputs are evaluated: scenario, fixture, oracle, Hub pin, contracts, validator basis, and evaluation rules as applicable. It is captured before execution. |
+| `provenance.execution_repository_revision` | The actual Consumer `HEAD` checked out when the run occurred. It is captured at run time. |
+
+The two revisions may be equal. If they differ, `provenance.revision_delta` must explicitly record that the difference was reviewed, why it is allowed, and that no execution-affecting change is present. This explicit provenance is auditable; it must not be used to hide scenario, fixture, oracle, contract, validator, CI, or Hub-pin changes.
+
+V2 also records `evaluation`, a post-run section containing C1-C10 binary criteria, total score, result, oracle path/SHA, evaluator identity, evaluation method, validator command/result, run-level acceptance outcome, and reproducibility claim status. Evaluation belongs in the run record, not in the immutable raw result Markdown or closed payload v1. Cohort acceptance and reproducibility remain derived from the three member run records and the Stage 7 thresholds; no separate cohort artifact is introduced by v2.
+
+V2 models execution-surface version as structured provenance. Exact versions use `availability: EXACT` plus `value`. When the surface cannot expose an exact version, the record must use `availability: UNAVAILABLE` plus `reason`; sentinel prose such as `not-exposed-by-session` must not be recorded as an exact version. A run with an unavailable exact surface version may be preserved as historical/non-reproducible evidence, but it cannot claim reproducibility or contribute to full Stage 7 acceptance under the current plan.
+
 ## Field reference
 
-Top-level required fields:
+Top-level v1 required fields:
 
 | Field | Meaning |
 | --- | --- |
@@ -96,13 +113,13 @@ Those invariants require a future approved validator. Schema-valid semantic-inva
 
 ## Versioning and compatibility
 
-Version 1 lives under `contracts/execution/v1/` and uses `schema_version: 1.0.0`. Incompatible changes belong in a future versioned directory and schema ID. Compatible clarifications may be documented without changing the meaning of v1 data.
+Version 1 lives under `contracts/execution/v1/` and uses `schema_version: 1.0.0`. V1 is immutable and remains valid for historical records only under its original semantics. Version 2 lives under `contracts/execution/v2/` and uses `schema_version: 2.0.0`. Future acceptance-eligible cohorts must use v2 unless a later approved version supersedes it. Incompatible changes belong in a future versioned directory and schema ID. Compatible clarifications may be documented without changing the meaning of prior-version data.
 
 This contract is additive to Stage 6 evidence contracts. It does not alter `contracts/evidence/v1/`, `evidence/manifest.v1.json`, or any payload/routing-trace semantics.
 
 ## Line-ending attributes
 
-The contract schema and examples under `contracts/execution/v1/**/*.json` are protected as LF text by the repository attributes. Future run records and payload sidecars under `evidence/runs/**/*.json` are also protected as LF text by the repository attributes. These LF attributes preserve cross-platform bytes for strict encoding checks; they do not establish semantic validity, evidence acceptance, release readiness, or reproducibility.
+The contract schema and examples under `contracts/execution/v1/**/*.json` and `contracts/execution/v2/**/*.json` are protected as LF text by the repository attributes. Future run records and payload sidecars under `evidence/runs/**/*.json` are also protected as LF text by the repository attributes. These LF attributes preserve cross-platform bytes for strict encoding checks; they do not establish semantic validity, evidence acceptance, release readiness, or reproducibility.
 
 ## Append-only behavior
 
@@ -110,7 +127,7 @@ Future run records are append-only. A run ID or path collision is a hard stop. E
 
 ## Example expectations
 
-The valid example under `contracts/execution/v1/examples/valid/run-record.json` is synthetic structural data only. It is not evidence and does not claim that controlled execution occurred.
+The valid examples under `contracts/execution/v1/examples/valid/run-record.json` and `contracts/execution/v2/examples/valid/run-record.json` are synthetic structural data only. They are not evidence and do not claim that controlled execution occurred.
 
 The invalid examples isolate schema failures:
 
@@ -122,10 +139,14 @@ The semantic-invalid examples are expected to pass JSON Schema but remain unacce
 - `run-record-cohort-mismatch.json` has a `run_id` cohort segment that differs from `cohort_id`.
 - `run-record-artifact-hash-mismatch.json` records a structurally valid result SHA-256 that is documented as not matching the referenced artifact bytes.
 
-## Deferred validator and CI work
+## Validator and CI boundary
 
-Validator and CI integration are explicitly deferred. This contract candidate does not update `scripts/validate_sandbox.py`, tests, workflow files, dependencies, lockfiles, manifests, or evidence contracts. Future validator work must be separately approved and must verify semantic invariants, file existence, link safety, hash integrity, append-only identity, cross-file alignment, and any future external run-record index or manifest.
+The sandbox validator recognizes v1 and v2 run records independently. It preserves v1 historical validation and adds v2 checks for dual Consumer revisions, C1-C10 completeness, oracle evaluation alignment, validator result evidence, structured execution-surface version availability, and false reproducibility claims. CI workflow integration for v2 remains separately gated and is not changed by the v2 contract slice.
 
 ## Authorization boundary
 
 This contract does not authorize controlled execution, scenario execution, evidence generation, acceptance, release readiness, reproducibility claims, manifest selection, oracle changes, fixture changes, result creation, payload creation, or roadmap changes. Controlled execution remains `NOT STARTED` until a separate approved Level 3 execution gate is granted and all hard dependencies are satisfied.
+
+## SIM-002 R01 disposition
+
+The SIM-002/R01 pilot is documented in `docs/stage7-sim-002-r01-disposition.md`. Its artifacts remain immutable historical controlled-execution evidence. They are not acceptance evidence, not reusable as R02 members, and not subject to retroactive v2 repair.

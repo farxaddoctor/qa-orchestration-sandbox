@@ -247,6 +247,116 @@ def create_valid_run_record_cohort(
     return paths
 
 
+
+def evaluation_document(oracle_path: str, oracle_sha: str, result_path: str, *, accepted: bool = True, reproducibility_claimed: bool = True) -> dict:
+    criteria_names = {
+        "C1": "Command",
+        "C2": "Constitution",
+        "C3": "Policies",
+        "C4": "Workflow",
+        "C5": "Primary agent",
+        "C6": "Skills",
+        "C7": "Audit decision",
+        "C8": "Human Gate decision",
+        "C9": "Output and trace",
+        "C10": "Safety",
+    }
+    criteria = {
+        key: {
+            "id": key,
+            "name": name,
+            "passed": True,
+            "score": 1,
+            "evidence": [f"{result_path}#{key.lower()}"],
+        }
+        for key, name in criteria_names.items()
+    }
+    return {
+        "criteria": criteria,
+        "total_score": 10,
+        "result": "PASS",
+        "oracle": {
+            "path": oracle_path,
+            "sha256": oracle_sha,
+        },
+        "evaluator_id": "synthetic-evaluator-stage7-a",
+        "method": "C1-C10_BINARY",
+        "validator_result": {
+            "validator_id": "scripts/validate_sandbox.py",
+            "command": "python -B scripts/validate_sandbox.py",
+            "exit_code": 0,
+            "result": "PASS",
+            "validated_at": "2026-01-02T00:06:00Z",
+        },
+        "run_acceptance": "ACCEPTED" if accepted else "NOT_ACCEPTED",
+        "reproducibility": {
+            "claimed": reproducibility_claimed,
+            "result": "PASS" if reproducibility_claimed else "NOT_CLAIMED",
+            "reason": "exact execution-surface version was recorded" if reproducibility_claimed else "exact execution-surface version unavailable",
+        },
+    }
+
+
+def create_valid_run_record_v2_cohort(
+    root: Path,
+    *,
+    scenario_id: str = "SIM-002",
+    attempt_number: int = 1,
+    execution_input_revision: str = "a" * 40,
+    execution_repository_revision: str | None = None,
+    hub_pin: str = "b" * 40,
+    surface_version_available: bool = True,
+) -> dict[str, Path]:
+    execution_repository_revision = execution_repository_revision or execution_input_revision
+    paths = create_valid_run_record_cohort(
+        root,
+        scenario_id=scenario_id,
+        attempt_number=attempt_number,
+        consumer_revision=execution_input_revision,
+        hub_pin=hub_pin,
+    )
+    for cohort_id, record_path in list(paths.items()):
+        record = read_json(record_path)
+        record["schema_version"] = "2.0.0"
+        record["execution_surface"]["version"] = {
+            "availability": "EXACT",
+            "value": "stage7-contract-test-v2",
+        }
+        if not surface_version_available:
+            record["execution_surface"]["version"] = {
+                "availability": "UNAVAILABLE",
+                "reason": "surface does not expose an exact version",
+            }
+        record["provenance"] = {
+            "execution_input_revision": execution_input_revision,
+            "execution_repository_revision": execution_repository_revision,
+            "hub_pin": hub_pin,
+            "revision_delta": {
+                "allowed": execution_input_revision != execution_repository_revision,
+                "execution_affecting_change_present": False,
+                "reason": "reviewed documentation-only repository delta" if execution_input_revision != execution_repository_revision else "execution repository revision equals the frozen execution-input revision",
+                "review_reference": "docs/stage7-execution-plan.md",
+            },
+            "schema_versions": {
+                "payload": "1.0.0",
+                "routing_trace": "1.0.0",
+                "run_record": "2.0.0",
+            },
+        }
+        record["evaluation"] = evaluation_document(
+            record["inputs"]["oracle"]["path"],
+            record["inputs"]["oracle"]["sha256"],
+            record["artifacts"]["result"]["path"],
+            accepted=surface_version_available,
+            reproducibility_claimed=surface_version_available,
+        )
+        v2_path = record_path.with_name("run-record.v2.json")
+        record_path.unlink()
+        write_json(v2_path, record)
+        paths[cohort_id] = v2_path
+    return paths
+
+
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -719,6 +829,149 @@ class ValidateSandboxTests(unittest.TestCase):
             first = validate_sandbox.validate_run_records(root)
             second = validate_sandbox.validate_run_records(root)
         self.assertEqual([item.render() for item in first], [item.render() for item in second])
+
+    def test_valid_v2_run_record_same_revision_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            create_valid_run_record_v2_cohort(root)
+            diagnostics = validate_sandbox.validate_run_records(root)
+        self.assertNotIn("FAIL", {item.severity for item in diagnostics})
+        self.assertEqual(3, sum(1 for item in diagnostics if item.code == "RUN_RECORD"))
+
+    def test_valid_v2_run_record_distinct_reviewed_revisions_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            create_valid_run_record_v2_cohort(root, execution_input_revision="a" * 40, execution_repository_revision="c" * 40)
+            diagnostics = validate_sandbox.validate_run_records(root)
+        self.assertNotIn("FAIL", {item.severity for item in diagnostics})
+
+    def test_v2_run_record_missing_revision_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            paths = create_valid_run_record_v2_cohort(root)
+            record = read_json(paths["P1"])
+            del record["provenance"]["execution_repository_revision"]
+            rewrite_record(paths["P1"], record)
+            issues = validate_sandbox.validate_run_records(root)
+        self.assertIn("REQUIRED_KEY", issue_codes(issues))
+
+    def test_v2_run_record_complete_c1_c10_evaluation_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            paths = create_valid_run_record_v2_cohort(root)
+            record = read_json(paths["P1"])
+            issues = validate_sandbox.validate_run_record_shape(record, paths["P1"].as_posix())
+        self.assertNotIn("RUN_RECORD_EVALUATION", issue_codes(issues))
+        self.assertEqual(set(validate_sandbox.C1_C10), set(record["evaluation"]["criteria"]))
+
+    def test_v2_run_record_incomplete_c1_c10_evaluation_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            paths = create_valid_run_record_v2_cohort(root)
+            record = read_json(paths["P1"])
+            del record["evaluation"]["criteria"]["C10"]
+            rewrite_record(paths["P1"], record)
+            issues = validate_sandbox.validate_run_records(root)
+        self.assertIn("REQUIRED_KEY", issue_codes(issues))
+
+    def test_v2_run_record_oracle_evaluation_hash_mismatch_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            paths = create_valid_run_record_v2_cohort(root)
+            record = read_json(paths["P1"])
+            record["evaluation"]["oracle"]["sha256"] = "0" * 64
+            rewrite_record(paths["P1"], record)
+            issues = validate_sandbox.validate_run_records(root)
+        self.assertIn("RUN_RECORD_EVALUATION_ORACLE", issue_codes(issues))
+
+    def test_v2_run_record_validator_result_present_and_valid(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            paths = create_valid_run_record_v2_cohort(root)
+            record = read_json(paths["P1"])
+            validator_result = record["evaluation"]["validator_result"]
+            diagnostics = validate_sandbox.validate_run_records(root)
+        self.assertEqual("python -B scripts/validate_sandbox.py", validator_result["command"])
+        self.assertEqual(0, validator_result["exit_code"])
+        self.assertNotIn("FAIL", {item.severity for item in diagnostics})
+
+    def test_v2_exact_execution_surface_version_allows_reproducibility_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            create_valid_run_record_v2_cohort(root, surface_version_available=True)
+            diagnostics = validate_sandbox.validate_run_records(root)
+        self.assertNotIn("RUN_RECORD_REPRODUCIBILITY", issue_codes(diagnostics))
+        self.assertNotIn("RUN_RECORD_ACCEPTANCE", issue_codes(diagnostics))
+
+    def test_v2_unavailable_surface_version_rejects_reproducibility_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            paths = create_valid_run_record_v2_cohort(root, surface_version_available=False)
+            record = read_json(paths["P1"])
+            record["evaluation"]["reproducibility"] = {
+                "claimed": True,
+                "result": "PASS",
+                "reason": "invalid claim",
+            }
+            record["evaluation"]["run_acceptance"] = "ACCEPTED"
+            rewrite_record(paths["P1"], record)
+            issues = validate_sandbox.validate_run_records(root)
+        codes = issue_codes(issues)
+        self.assertIn("RUN_RECORD_REPRODUCIBILITY", codes)
+        self.assertIn("RUN_RECORD_ACCEPTANCE", codes)
+
+    def test_v2_unavailable_surface_version_preserved_as_non_reproducible_history(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            create_valid_run_record_v2_cohort(root, surface_version_available=False)
+            diagnostics = validate_sandbox.validate_run_records(root)
+        self.assertNotIn("FAIL", {item.severity for item in diagnostics})
+        self.assertEqual(3, sum(1 for item in diagnostics if item.code == "RUN_RECORD"))
+
+    def test_existing_v1_run_records_remain_valid_after_v2_support(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            create_valid_run_record_cohort(root)
+            diagnostics = validate_sandbox.validate_run_records(root)
+        self.assertNotIn("FAIL", {item.severity for item in diagnostics})
+        self.assertEqual(3, sum(1 for item in diagnostics if item.code == "RUN_RECORD"))
+
+    def test_mixed_run_record_versions_in_one_cohort_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            paths = create_valid_run_record_cohort(root)
+            p1 = read_json(paths["P1"])
+            p1["schema_version"] = "2.0.0"
+            p1["execution_surface"]["version"] = {
+                "availability": "EXACT",
+                "value": "stage7-contract-test-v2",
+            }
+            p1["provenance"] = {
+                "execution_input_revision": "a" * 40,
+                "execution_repository_revision": "a" * 40,
+                "hub_pin": "b" * 40,
+                "revision_delta": {
+                    "allowed": False,
+                    "execution_affecting_change_present": False,
+                    "reason": "execution repository revision equals the frozen execution-input revision",
+                    "review_reference": "docs/stage7-execution-plan.md",
+                },
+                "schema_versions": {
+                    "payload": "1.0.0",
+                    "routing_trace": "1.0.0",
+                    "run_record": "2.0.0",
+                },
+            }
+            p1["evaluation"] = evaluation_document(
+                p1["inputs"]["oracle"]["path"],
+                p1["inputs"]["oracle"]["sha256"],
+                p1["artifacts"]["result"]["path"],
+            )
+            v2_path = paths["P1"].with_name("run-record.v2.json")
+            paths["P1"].unlink()
+            write_json(v2_path, p1)
+            issues = validate_sandbox.validate_run_records(root)
+        self.assertIn("RUN_RECORD_COHORT_VERSION", issue_codes(issues))
 
     def make_minimal_invalid_root(self) -> Path:
         temp_dir = tempfile.TemporaryDirectory()
