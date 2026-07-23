@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "S7-SIM-002-P1-R01",
+  "cohort_id": "P1",
+  "scenario_id": "SIM-002",
+  "execution_role": "PRIMARY",
+  "attempt_number": 1,
+  "executor_id": "synthetic-executor-p1-r01",
+  "started_at": "2026-07-21T19:25:18Z",
+  "completed_at": "2026-07-21T19:25:18Z",
+  "model_id": "GPT-5.5 High Fast",
+  "execution_surface": {
+    "name": "codex-agent-api",
+    "version": "not-exposed-by-session"
+  },
+  "environment": {
+    "os": {
+      "name": "Microsoft Windows",
+      "version": "10.0.26200"
+    },
+    "architecture": "x64"
+  },
+  "runtime_versions": {
+    "python": "3.13.5",
+    "git": "2.45.1.windows.1",
+    "node": "24.11.1",
+    "npm": "11.6.2",
+    "npx": "11.6.2",
+    "ajv_cli": "not-used-in-this-run",
+    "sandbox_validator": "scripts/validate_sandbox.py@6ab827f267201a816fa7bac5b98b2d2467a79a1f"
+  },
+  "provenance": {
+    "consumer_execution_input": "20b512f5bcff53aa10416c91e66e11d92a95fcf6",
+    "hub_pin": "e9478de80719087167e9f4bb1091497df49186e0",
+    "schema_versions": {
+      "payload": "1.0.0",
+      "routing_trace": "1.0.0",
+      "run_record": "1.0.0"
+    }
+  },
+  "inputs": {
+    "scenario": {
+      "path": "scenarios/SIM-002-qa-automate.md",
+      "sha256": "76eaafb87911da0d4bf69bdf5bb62c9262dc5f025ad44381dbeeeab5960cb426"
+    },
+    "fixtures": [
+      {
+        "path": "fixtures/automation/approved-test-plan.md",
+        "sha256": "1ddce5565a1356ae661d6f0e487183cc9d0934056a432d5b4c837e7cd8e39aa7"
+      }
+    ],
+    "oracle": {
+      "path": "expected/SIM-002-expected.md",
+      "sha256": "a09b2f4b43ea83a2e0a52439e757ffba1de1cd926ce79cd31dbda50a0e08ae88"
+    }
+  },
+  "artifacts": {
+    "payload": {
+      "path": "evidence/runs/SIM-002/S7-SIM-002-P1-R01.payload.json",
+      "sha256": "75a1615f8580b5a0bfdc1bae5f09011ced9f87420fcd8d32605bffe5b1512040",
+      "evidence_id": "SIM-002:stage7-p1-r01:v1"
+    },
+    "result": {
+      "path": "results/SIM-002-stage7-p1-r01.md",
+      "sha256": "78bfbc81f79fab93ba67149af42090d2fc9e25c5e1235f15ba2d8a6d1404857c"
+    }
+  }
+}
