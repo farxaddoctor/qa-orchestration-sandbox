@@ -90,6 +90,14 @@ jobs:
         run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/execution/v1/run-record.schema.json -d contracts/execution/v1/examples/semantic-invalid/run-record-cohort-mismatch.json --valid
       - name: Ajv run record semantic artifact hash mismatch
         run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/execution/v1/run-record.schema.json -d contracts/execution/v1/examples/semantic-invalid/run-record-artifact-hash-mismatch.json --valid
+      - name: Ajv run record v2 valid example
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/execution/v2/run-record.schema.json -d contracts/execution/v2/examples/valid/run-record.json --valid
+      - name: Ajv run record v2 missing repository revision
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/execution/v2/run-record.schema.json -d contracts/execution/v2/examples/invalid/run-record-missing-repository-revision.json --invalid
+      - name: Ajv run record v2 incomplete evaluation
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/execution/v2/run-record.schema.json -d contracts/execution/v2/examples/invalid/run-record-incomplete-evaluation.json --invalid
+      - name: Ajv run record v2 false reproducibility semantic
+        run: npx --yes ajv-cli@5.0.0 test --spec=draft2020 --strict=true -s contracts/execution/v2/run-record.schema.json -d contracts/execution/v2/examples/semantic-invalid/run-record-false-reproducibility.json --valid
       - name: Run hub static validator
         working-directory: vendor/qa-skills-hub
         run: python scripts/validate_repository.py
