@@ -1,4 +1,7 @@
 results/*.md text eol=lf
+scenarios/**/*.md text eol=lf
+fixtures/**/*.md text eol=lf
+expected/**/*.md text eol=lf
 contracts/evidence/v1/**/*.json text eol=lf
 evidence/*.json text eol=lf
 contracts/execution/v1/**/*.json text eol=lf
