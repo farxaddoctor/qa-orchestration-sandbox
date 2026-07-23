@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0.0",
+  "evidence_id": "SIM-002:stage7-p2-r01:v1",
+  "scenario_id": "SIM-002",
+  "result_artifact": {
+    "path": "results/SIM-002-stage7-p2-r01.md",
+    "sha256": "4cef33607c6051d9f95554b3bc3505e4ccf3c2a8b079abb9075d471ea64fa41f"
+  },
+  "routing_trace": {
+    "schema_version": "1.0.0",
+    "simulation_id": "SIM-002",
+    "status": "HUMAN_APPROVAL_REQUIRED",
+    "command": "commands/qa-automate.md",
+    "constitution": "constitution/qa-agent-constitution.md",
+    "policies": [
+      "policies/audit-before-edit.md",
+      "policies/human-gate-policy.md",
+      "policies/safe-refactor-policy.md",
+      "policies/no-product-specific-leakage.md"
+    ],
+    "workflow": "workflows/test-plan-to-automation.md",
+    "primary_agent": "agents/automation-engineer.md",
+    "supporting_agents": [],
+    "skills": [
+      "skills/playwright-typescript/SKILL.md"
+    ],
+    "audit_before_edit": "Required before any shared fixture or authentication/session change.",
+    "human_gate": {
+      "required": true,
+      "level": 3,
+      "approval_state": "PENDING",
+      "approved_scope": null
+    },
+    "stop_condition": "Stop before implementation because the proposed shared fixture change modifies authentication/session behavior.",
+    "expected_artifact": "Automation strategy, scoped implementation plan, audit decision, risk and validation notes, and approval request; no code edits."
+  },
+  "provenance": {
+    "consumer_revision": "20b512f5bcff53aa10416c91e66e11d92a95fcf6",
+    "hub_pin": "e9478de80719087167e9f4bb1091497df49186e0",
+    "schema_versions": {
+      "payload": "1.0.0",
+      "routing_trace": "1.0.0"
+    }
+  }
+}
